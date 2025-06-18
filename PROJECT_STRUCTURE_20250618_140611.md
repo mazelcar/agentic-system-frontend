@@ -1,3 +1,387 @@
+# Project Documentation
+
+Generated on: 2025-06-18 14:06:11
+
+## Directory Structure
+frontend
+├── public/
+│   ├── favicon.ico
+│   ├── index.html
+│   ├── logo192.png
+│   ├── logo512.png
+│   ├── manifest.json
+│   └── robots.txt
+├── src/
+│   ├── App.css
+│   ├── App.js
+│   ├── App.test.js
+│   ├── index.css
+│   ├── index.js
+│   ├── logo.svg
+│   ├── reportWebVitals.js
+│   └── setupTests.js
+├── .gitignore
+├── PROJECT_STRUCTURE_20250618_140611.md
+├── README.md
+├── generate_file_structure.py
+├── package-lock.json
+└── package.json
+
+## File Contents
+
+
+### .gitignore (310.00 B)
+
+*Binary or unsupported file format based on extension*
+
+### README.md (3.28 KB)
+
+```md
+# Getting Started with Create React App
+
+This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+
+## Available Scripts
+
+In the project directory, you can run:
+
+### `npm start`
+
+Runs the app in the development mode.\
+Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+
+The page will reload when you make changes.\
+You may also see any lint errors in the console.
+
+### `npm test`
+
+Launches the test runner in the interactive watch mode.\
+See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+
+### `npm run build`
+
+Builds the app for production to the `build` folder.\
+It correctly bundles React in production mode and optimizes the build for the best performance.
+
+The build is minified and the filenames include the hashes.\
+Your app is ready to be deployed!
+
+See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+
+### `npm run eject`
+
+**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+
+If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+
+Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+
+You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+
+## Learn More
+
+You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+
+To learn React, check out the [React documentation](https://reactjs.org/).
+
+### Code Splitting
+
+This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+
+### Analyzing the Bundle Size
+
+This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+
+### Making a Progressive Web App
+
+This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+
+### Advanced Configuration
+
+This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+
+### Deployment
+
+This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+
+### `npm run build` fails to minify
+
+This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+
+```
+
+### generate_file_structure.py (12.20 KB)
+
+```py
+import os
+import sys
+from datetime import datetime
+from typing import Set, Optional
+import argparse
+import logging
+import chardet # Import chardet
+
+class ProjectDocumentGenerator:
+    def __init__(
+        self,
+        base_path: str,
+        output_file: str,
+        ignored_dirs: Optional[Set[str]] = None,
+        text_extensions: Optional[Set[str]] = None,
+        max_file_size: int = 10 * 1024 * 1024  # 10 MB
+    ):
+        self.base_path = os.path.abspath(base_path)
+        self.output_file = os.path.abspath(output_file)
+        self.ignored_dirs = ignored_dirs or {'venv', '__pycache__', '.git', 'node_modules'}
+        # *** ADDED .prompt to the default list ***
+        self.text_extensions = text_extensions or {
+            '.py', '.txt', '.md', '.json', '.yaml', '.yml',
+            '.js', '.jsx', '.ts', '.tsx', '.css', '.scss',
+            '.html', '.htm', '.xml', '.csv', '.ini', '.cfg',
+            '.prompt' # <-- Added here
+        }
+        self.stats = {
+            'total_files': 0,
+            'text_files': 0,
+            'binary_files': 0,
+            'total_size': 0
+        }
+
+        # Store the output file's relative path to base_path
+        if os.path.commonpath([self.output_file, self.base_path]) == self.base_path:
+            self.output_file_rel = os.path.relpath(self.output_file, self.base_path)
+        else:
+            self.output_file_rel = None  # Output file is outside base_path
+
+        self.max_file_size = max_file_size  # Maximum file size to include (in bytes)
+
+    def format_size(self, size: int) -> str:
+        """Convert size in bytes to human-readable format."""
+        for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
+            if size < 1024:
+                return f"{size:.2f} {unit}"
+            size /= 1024
+        return f"{size:.2f} PB"
+
+    def is_text_file(self, filename: str) -> bool:
+        """Determine if a file is a text file based on its extension."""
+        # *** Keep the extension check as the primary method ***
+        return os.path.splitext(filename)[1].lower() in self.text_extensions
+
+    def generate_documentation(self):
+        """Generate the project documentation."""
+        with open(self.output_file, 'w', encoding='utf-8') as doc:
+            # Write header
+            doc.write("# Project Documentation\n\n")
+            doc.write(f"Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
+
+            # Write base directory name
+            base_dir_name = os.path.basename(self.base_path)
+            doc.write(f"## Directory Structure\n{base_dir_name}\n")
+            tree_lines = []
+            self._generate_directory_structure(self.base_path, tree_lines, prefix="")
+            doc.writelines(tree_lines)
+
+            # Generate file contents
+            doc.write("\n## File Contents\n\n")
+            self._generate_file_contents(doc)
+
+            # Write statistics
+            self._write_statistics(doc)
+
+    def _generate_directory_structure(self, current_path: str, tree_lines: list, prefix: str):
+        """Recursively generate the directory structure."""
+        try:
+            entries = os.listdir(current_path)
+        except PermissionError as e:
+            logging.warning(f"Permission denied: {current_path}")
+            return
+        except Exception as e:
+            logging.warning(f"Error accessing {current_path}: {e}")
+            return
+
+        dirs = sorted([d for d in entries if os.path.isdir(os.path.join(current_path, d)) and d not in self.ignored_dirs])
+        files = sorted([f for f in entries if os.path.isfile(os.path.join(current_path, f))])
+
+        all_entries = dirs + files
+        total_entries = len(all_entries)
+
+        for index, entry in enumerate(all_entries):
+            path = os.path.join(current_path, entry)
+            is_last = index == (total_entries - 1)
+            connector = "└── " if is_last else "├── "
+            if os.path.isdir(path):
+                tree_lines.append(f"{prefix}{connector}{entry}/\n")
+                new_prefix = prefix + ("    " if is_last else "│   ")
+                self._generate_directory_structure(path, tree_lines, new_prefix)
+            else:
+                tree_lines.append(f"{prefix}{connector}{entry}\n")
+
+    def _generate_file_contents(self, doc_file):
+        """Generate the contents of each file in a separate section."""
+        for root, dirs, files in os.walk(self.base_path):
+            dirs[:] = [d for d in dirs if d not in self.ignored_dirs]
+
+            for file in sorted(files):
+                file_path = os.path.join(root, file)
+
+                if self.output_file_rel and os.path.normpath(os.path.relpath(file_path, self.base_path)) == os.path.normpath(self.output_file_rel):
+                    continue
+
+                try:
+                    file_size = os.path.getsize(file_path)
+                except OSError as e:
+                    logging.warning(f"Cannot access file {file_path}: {e}")
+                    continue
+
+                rel_path = os.path.relpath(file_path, self.base_path)
+                self.stats['total_files'] += 1
+                self.stats['total_size'] += file_size
+
+                doc_file.write(f"\n### {rel_path} ({self.format_size(file_size)})\n\n")
+
+                # *** Use the is_text_file check based on extension ***
+                if self.is_text_file(file):
+                    self.stats['text_files'] += 1
+                    if file_size == 0:
+                        doc_file.write("```\n*Empty file*\n```\n")
+                        continue
+                    if file_size > self.max_file_size:
+                        doc_file.write("*File too large to display.*\n")
+                        logging.info(f"Skipped large file: {file_path}")
+                        continue
+
+                    # *** Attempt to read with UTF-8 first, fallback with detection ***
+                    try:
+                        with open(file_path, 'r', encoding='utf-8') as f:
+                            content = f.read()
+                    except UnicodeDecodeError:
+                        logging.warning(f"UTF-8 decoding failed for {file_path}. Attempting detection.")
+                        try:
+                            with open(file_path, 'rb') as fb:
+                                raw_data = fb.read()
+                                detected_encoding = chardet.detect(raw_data)['encoding']
+                                if detected_encoding:
+                                    logging.info(f"Detected encoding {detected_encoding} for {file_path}.")
+                                    content = raw_data.decode(detected_encoding, errors='replace')
+                                else:
+                                    logging.error(f"Could not detect encoding for {file_path}. Skipping content.")
+                                    content = "*Error reading file: Could not detect encoding*"
+                        except Exception as e_read:
+                             logging.error(f"Error reading file {file_path} after detection attempt: {e_read}")
+                             content = f"*Error reading file: {str(e_read)}*"
+                    except Exception as e_other:
+                        logging.error(f"Error reading file {file_path}: {e_other}")
+                        content = f"*Error reading file: {str(e_other)}*"
+
+                    # Write content to doc
+                    doc_file.write("```")
+                    lang = os.path.splitext(file)[1][1:]
+                    if lang: doc_file.write(lang)
+                    doc_file.write("\n")
+                    # Replace potential problematic characters if needed, though decode(errors='replace') handles some
+                    doc_file.write(content.replace('\x00', '')) # Example: remove null bytes
+                    doc_file.write("\n```\n")
+                else:
+                    # If extension not in list, mark as binary
+                    self.stats['binary_files'] += 1
+                    doc_file.write("*Binary or unsupported file format based on extension*\n")
+
+
+    def _write_statistics(self, doc_file):
+        """Write project statistics."""
+        doc_file.write("\n## Project Statistics\n\n")
+        doc_file.write(f"- Total Files: {self.stats['total_files']}\n")
+        doc_file.write(f"- Text Files: {self.stats['text_files']}\n")
+        doc_file.write(f"- Binary Files: {self.stats['binary_files']}\n")
+        doc_file.write(f"- Total Size: {self.format_size(self.stats['total_size'])}\n")
+
+def parse_arguments():
+    """Parse command-line arguments."""
+    parser = argparse.ArgumentParser(description="Generate project documentation.")
+    parser.add_argument("base_path", nargs='?', default=".", help="Base directory of the project.")
+    parser.add_argument("-o", "--output-dir", default=".", help="Output directory.")
+    parser.add_argument("-i", "--ignore", nargs='*', default=['venv', '__pycache__', '.git', 'node_modules'], help="Directories to ignore.")
+    # *** ADDED .prompt to the default list ***
+    parser.add_argument(
+        "-e", "--extensions",
+        nargs='*',
+        default=[
+            '.py', '.txt', '.md', '.json', '.yaml', '.yml',
+            '.js', '.jsx', '.ts', '.tsx', '.css', '.scss',
+            '.html', '.htm', '.xml', '.csv', '.ini', '.cfg',
+            '.prompt' # <-- Added here
+        ],
+        help="List of file extensions to consider as text files."
+    )
+    parser.add_argument("-m", "--max-size", type=int, default=10 * 1024 * 1024, help="Max file size (bytes) for content.")
+    parser.add_argument("--verbose", action='store_true', help="Enable verbose logging.")
+    return parser.parse_args()
+
+def setup_logging(verbose: bool):
+    """Configure logging settings."""
+    level = logging.DEBUG if verbose else logging.INFO
+    logging.basicConfig(level=level, format='[%(levelname)s] %(message)s')
+
+def generate_timestamped_filename(base_dir: str, base_name: str = "PROJECT_STRUCTURE", extension: str = "md") -> str:
+    """Generate a filename with the current date and time appended."""
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"{base_name}_{timestamp}.{extension}"
+    return os.path.join(base_dir, filename)
+
+def main():
+    """Main function to run the documentation generator."""
+    args = parse_arguments()
+    setup_logging(args.verbose)
+
+    # *** Install chardet if not present ***
+    try:
+        import chardet
+    except ImportError:
+        print("Installing chardet library for encoding detection...")
+        try:
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "chardet"])
+            import chardet # Try importing again
+            print("chardet installed successfully.")
+        except Exception as e:
+            logging.error(f"Failed to install chardet. Encoding detection fallback might not work: {e}")
+            # Continue without chardet if installation fails
+
+    try:
+        output_file = generate_timestamped_filename(args.output_dir)
+        generator = ProjectDocumentGenerator(
+            base_path=args.base_path,
+            output_file=output_file,
+            ignored_dirs=set(args.ignore),
+            text_extensions=set(args.extensions),
+            max_file_size=args.max_size
+        )
+        generator.generate_documentation()
+        print(f"\nDocumentation generated successfully!")
+        print(f"Output file: {os.path.abspath(generator.output_file)}")
+    except ValueError as ve:
+        logging.error(ve); sys.exit(1)
+    except Exception as e:
+        logging.error(f"An unexpected error occurred: {e}"); sys.exit(1)
+
+if __name__ == "__main__":
+    # Add chardet installation logic here as well for direct script execution
+    try:
+        import chardet
+    except ImportError:
+        print("Installing chardet library for encoding detection...")
+        try:
+            import subprocess # Ensure subprocess is imported here too
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "chardet"])
+            print("chardet installed successfully.")
+        except Exception as e:
+            print(f"WARNING: Failed to install chardet. Encoding detection fallback might not work: {e}")
+    main()
+```
+
+### package-lock.json (647.63 KB)
+
+```json
 {
   "name": "frontend",
   "version": "0.1.0",
@@ -14,7 +398,6 @@
         "@testing-library/user-event": "^13.5.0",
         "react": "^19.1.0",
         "react-dom": "^19.1.0",
-        "react-router-dom": "^7.6.2",
         "react-scripts": "5.0.1",
         "web-vitals": "^2.1.4"
       }
@@ -13935,53 +14318,6 @@
         "node": ">=0.10.0"
       }
     },
-    "node_modules/react-router": {
-      "version": "7.6.2",
-      "resolved": "https://registry.npmjs.org/react-router/-/react-router-7.6.2.tgz",
-      "integrity": "sha512-U7Nv3y+bMimgWjhlT5CRdzHPu2/KVmqPwKUCChW8en5P3znxUqwlYFlbmyj8Rgp1SF6zs5X4+77kBVknkg6a0w==",
-      "license": "MIT",
-      "dependencies": {
-        "cookie": "^1.0.1",
-        "set-cookie-parser": "^2.6.0"
-      },
-      "engines": {
-        "node": ">=20.0.0"
-      },
-      "peerDependencies": {
-        "react": ">=18",
-        "react-dom": ">=18"
-      },
-      "peerDependenciesMeta": {
-        "react-dom": {
-          "optional": true
-        }
-      }
-    },
-    "node_modules/react-router-dom": {
-      "version": "7.6.2",
-      "resolved": "https://registry.npmjs.org/react-router-dom/-/react-router-dom-7.6.2.tgz",
-      "integrity": "sha512-Q8zb6VlTbdYKK5JJBLQEN06oTUa/RAbG/oQS1auK1I0TbJOXktqm+QENEVJU6QvWynlXPRBXI3fiOQcSEA78rA==",
-      "license": "MIT",
-      "dependencies": {
-        "react-router": "7.6.2"
-      },
-      "engines": {
-        "node": ">=20.0.0"
-      },
-      "peerDependencies": {
-        "react": ">=18",
-        "react-dom": ">=18"
-      }
-    },
-    "node_modules/react-router/node_modules/cookie": {
-      "version": "1.0.2",
-      "resolved": "https://registry.npmjs.org/cookie/-/cookie-1.0.2.tgz",
-      "integrity": "sha512-9Kr/j4O16ISv8zBBhJoi4bXOYNTkFLOqSL3UDB0njXxCXNezjeyVrJyGOWtgfs/q2km1gwBcfH8q1yEGoMYunA==",
-      "license": "MIT",
-      "engines": {
-        "node": ">=18"
-      }
-    },
     "node_modules/react-scripts": {
       "version": "5.0.1",
       "resolved": "https://registry.npmjs.org/react-scripts/-/react-scripts-5.0.1.tgz",
@@ -14887,12 +15223,6 @@
       "engines": {
         "node": ">= 0.8.0"
       }
-    },
-    "node_modules/set-cookie-parser": {
-      "version": "2.7.1",
-      "resolved": "https://registry.npmjs.org/set-cookie-parser/-/set-cookie-parser-2.7.1.tgz",
-      "integrity": "sha512-IOc8uWeOZgnb3ptbCURJWNjWUPcO3ZnTTdzsurqERrP6nPyv+paC55vJM0LpOlT2ne+Ix+9+CRG1MNLlyZ4GjQ==",
-      "license": "MIT"
     },
     "node_modules/set-function-length": {
       "version": "1.2.2",
@@ -17607,3 +17937,496 @@
     }
   }
 }
+
+```
+
+### package.json (849.00 B)
+
+```json
+{
+  "name": "frontend",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "@testing-library/dom": "^10.4.0",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^13.5.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-scripts": "5.0.1",
+    "web-vitals": "^2.1.4"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}
+
+```
+
+### public\favicon.ico (3.78 KB)
+
+*Binary or unsupported file format based on extension*
+
+### public\index.html (1.68 KB)
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#000000" />
+    <meta
+      name="description"
+      content="Web site created using create-react-app"
+    />
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
+    <!--
+      manifest.json provides metadata used when your web app is installed on a
+      user's mobile device or desktop. See https://developers.google.com/web/fundamentals/web-app-manifest/
+    -->
+    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+    <!--
+      Notice the use of %PUBLIC_URL% in the tags above.
+      It will be replaced with the URL of the `public` folder during the build.
+      Only files inside the `public` folder can be referenced from the HTML.
+
+      Unlike "/favicon.ico" or "favicon.ico", "%PUBLIC_URL%/favicon.ico" will
+      work correctly both with client-side routing and a non-root public URL.
+      Learn how to configure a non-root public URL by running `npm run build`.
+    -->
+    <title>React App</title>
+  </head>
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root"></div>
+    <!--
+      This HTML file is a template.
+      If you open it directly in the browser, you will see an empty page.
+
+      You can add webfonts, meta tags, or analytics to this file.
+      The build step will place the bundled scripts into the <body> tag.
+
+      To begin the development, run `npm start` or `yarn start`.
+      To create a production bundle, use `npm run build` or `yarn build`.
+    -->
+  </body>
+</html>
+
+```
+
+### public\logo192.png (5.22 KB)
+
+*Binary or unsupported file format based on extension*
+
+### public\logo512.png (9.44 KB)
+
+*Binary or unsupported file format based on extension*
+
+### public\manifest.json (492.00 B)
+
+```json
+{
+  "short_name": "React App",
+  "name": "Create React App Sample",
+  "icons": [
+    {
+      "src": "favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "logo192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "logo512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#000000",
+  "background_color": "#ffffff"
+}
+
+```
+
+### public\robots.txt (67.00 B)
+
+```txt
+# https://www.robotstxt.org/robotstxt.html
+User-agent: *
+Disallow:
+
+```
+
+### src\App.css (2.28 KB)
+
+```css
+/* src/App.css */
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #f0f2f5;
+}
+
+.App {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  max-width: 800px;
+  margin: 0 auto;
+  background-color: #fff;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+.header {
+  background-color: #007bff;
+  color: white;
+  padding: 15px 20px;
+  text-align: center;
+  font-size: 1.2rem;
+}
+
+.chat-window {
+  flex-grow: 1;
+  padding: 20px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.message {
+  padding: 10px 15px;
+  border-radius: 18px;
+  max-width: 75%;
+  line-height: 1.4;
+  word-wrap: break-word;
+}
+
+.message.user {
+  background-color: #007bff;
+  color: white;
+  align-self: flex-end;
+  border-bottom-right-radius: 4px;
+}
+
+.message.bot {
+  background-color: #e9e9eb;
+  color: #333;
+  align-self: flex-start;
+  border-bottom-left-radius: 4px;
+}
+
+.chat-input {
+  display: flex;
+  padding: 15px;
+  border-top: 1px solid #ddd;
+  background-color: #f9f9f9;
+}
+
+.chat-input input {
+  flex-grow: 1;
+  border: 1px solid #ccc;
+  border-radius: 20px;
+  padding: 12px 18px;
+  font-size: 16px;
+  margin-right: 10px;
+  outline: none;
+}
+
+.chat-input input:focus {
+  border-color: #007bff;
+}
+
+.chat-input button {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 12px 25px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: bold;
+  transition: background-color 0.2s;
+}
+
+.chat-input button:hover {
+  background-color: #0056b3;
+}
+
+.chat-input button:disabled {
+  background-color: #a0c7ff;
+  cursor: not-allowed;
+}
+
+/* Typing indicator animation */
+.typing-indicator {
+  display: flex;
+  align-items: center;
+}
+.typing-indicator span {
+  height: 8px;
+  width: 8px;
+  margin: 0 2px;
+  background-color: #9e9e9e;
+  border-radius: 50%;
+  display: inline-block;
+  animation: bounce 1.4s infinite ease-in-out both;
+}
+.typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+.typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+
+@keyframes bounce {
+  0%, 80%, 100% { transform: scale(0); }
+  40% { transform: scale(1.0); }
+}
+```
+
+### src\App.js (3.37 KB)
+
+```js
+// src/App.js
+import React, { useState, useEffect, useRef } from 'react';
+import './App.css';
+
+// --- CONFIGURATION ---
+// Replace this with your Lightsail instance's public IP address
+const API_URL = process.env.REACT_APP_API_URL;
+
+function App() {
+  const [messages, setMessages] = useState([
+    { text: "Hello! I'm the Network Troubleshooting Agent. How can I help you today?", sender: 'bot' }
+  ]);
+  const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Create a ref to the chat window for auto-scrolling
+  const chatWindowRef = useRef(null);
+
+  // This effect will run every time the 'messages' array changes
+  useEffect(() => {
+    // Scroll to the bottom of the chat window
+    if (chatWindowRef.current) {
+      chatWindowRef.current.scrollTop = chatWindowRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  const handleSend = async () => {
+    if (!input.trim() || isLoading) return;
+
+    const userMessage = { text: input, sender: 'user' };
+
+    // Add user's message and set loading state
+    setMessages(prevMessages => [...prevMessages, userMessage]);
+    setInput('');
+    setIsLoading(true);
+
+    // --- REAL API CALL LOGIC ---
+    try {
+      const response = await fetch(`${API_URL}/ask`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          question: input
+        }),
+      });
+
+      if (!response.ok) {
+        // Handle HTTP errors like 500, 404 etc.
+        throw new Error(`API request failed with status ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      // Create the bot's response message from the API data
+      const botMessage = { text: data.answer, sender: 'bot' };
+      setMessages(prevMessages => [...prevMessages, botMessage]);
+
+    } catch (error) {
+      console.error("Failed to fetch from API:", error);
+      // Show an error message to the user in the chat
+      const errorMessage = { text: `Sorry, I encountered an error. Please try again. (${error.message})`, sender: 'bot' };
+      setMessages(prevMessages => [...prevMessages, errorMessage]);
+    } finally {
+      // Always stop loading, whether the call succeeded or failed
+      setIsLoading(false);
+    }
+  };
+
+  const handleKeyPress = (event) => {
+    if (event.key === 'Enter') {
+      handleSend();
+    }
+  };
+
+  return (
+    <div className="App">
+      <div className="header">
+        <h1>Network Engineer Agent</h1>
+      </div>
+      <div className="chat-window" ref={chatWindowRef}>
+        {messages.map((message, index) => (
+          <div key={index} className={`message ${message.sender}`}>
+            {message.text}
+          </div>
+        ))}
+        {isLoading && (
+          <div className="message bot">
+            <div className="typing-indicator">
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+          </div>
+        )}
+      </div>
+      <div className="chat-input">
+        <input
+          type="text"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyPress={handleKeyPress}
+          placeholder="Ask a question about your network..."
+          disabled={isLoading}
+        />
+        <button onClick={handleSend} disabled={isLoading}>
+          {isLoading ? 'Sending...' : 'Send'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export default App;
+```
+
+### src\App.test.js (246.00 B)
+
+```js
+import { render, screen } from '@testing-library/react';
+import App from './App';
+
+test('renders learn react link', () => {
+  render(<App />);
+  const linkElement = screen.getByText(/learn react/i);
+  expect(linkElement).toBeInTheDocument();
+});
+
+```
+
+### src\index.css (366.00 B)
+
+```css
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+```
+
+### src\index.js (535.00 B)
+
+```js
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import './index.css';
+import App from './App';
+import reportWebVitals from './reportWebVitals';
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
+
+// If you want to start measuring performance in your app, pass a function
+// to log results (for example: reportWebVitals(console.log))
+// or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
+reportWebVitals();
+
+```
+
+### src\logo.svg (2.57 KB)
+
+*Binary or unsupported file format based on extension*
+
+### src\reportWebVitals.js (362.00 B)
+
+```js
+const reportWebVitals = onPerfEntry => {
+  if (onPerfEntry && onPerfEntry instanceof Function) {
+    import('web-vitals').then(({ getCLS, getFID, getFCP, getLCP, getTTFB }) => {
+      getCLS(onPerfEntry);
+      getFID(onPerfEntry);
+      getFCP(onPerfEntry);
+      getLCP(onPerfEntry);
+      getTTFB(onPerfEntry);
+    });
+  }
+};
+
+export default reportWebVitals;
+
+```
+
+### src\setupTests.js (241.00 B)
+
+```js
+// jest-dom adds custom jest matchers for asserting on DOM nodes.
+// allows you to do things like:
+// expect(element).toHaveTextContent(/react/i)
+// learn more: https://github.com/testing-library/jest-dom
+import '@testing-library/jest-dom';
+
+```
+
+## Project Statistics
+
+- Total Files: 19
+- Text Files: 14
+- Binary Files: 5
+- Total Size: 694.83 KB
