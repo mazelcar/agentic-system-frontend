@@ -4,7 +4,7 @@ import './App.css';
 
 // --- CONFIGURATION ---
 // Replace this with your Lightsail instance's public IP address
-const API_URL = "http://3.235.46.165";
+const API_URL = process.env.REACT_APP_API_URL;
 
 function App() {
   const [messages, setMessages] = useState([
