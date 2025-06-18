@@ -1,13 +1,14 @@
 // src/Chat.js
 
 import React, { useState, useEffect, useRef } from 'react';
+import SourceDocuments from './SourceDocuments'; // Import the new component
 
 // --- CONFIGURATION ---
 const API_URL = process.env.REACT_APP_API_URL;
 
 function Chat() {
   const [messages, setMessages] = useState([
-    { text: "Hello! I'm the Network Troubleshooting Agent. How can I help you today?", sender: 'bot' }
+    { text: "Hello! I'm the Network Troubleshooting Agent. How can I help you today?", sender: 'bot', sources: [] }
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -44,12 +45,17 @@ function Chat() {
       }
 
       const data = await response.json();
-      const botMessage = { text: data.answer, sender: 'bot' };
+      // Create the bot's response message, now including the sources
+      const botMessage = {
+        text: data.answer,
+        sender: 'bot',
+        sources: data.source_documents || [] // Ensure sources is always an array
+      };
       setMessages(prevMessages => [...prevMessages, botMessage]);
 
     } catch (error) {
       console.error("Failed to fetch from API:", error);
-      const errorMessage = { text: `Sorry, I encountered an error. Please try again. (${error.message})`, sender: 'bot' };
+      const errorMessage = { text: `Sorry, I encountered an error. Please try again. (${error.message})`, sender: 'bot', sources: [] };
       setMessages(prevMessages => [...prevMessages, errorMessage]);
     } finally {
       setIsLoading(false);
@@ -66,16 +72,22 @@ function Chat() {
     <>
       <div className="chat-window" ref={chatWindowRef}>
         {messages.map((message, index) => (
-          <div key={index} className={`message ${message.sender}`}>
-            {message.text}
+          <div key={index} className={`message-container ${message.sender}`}>
+            <div className="message-bubble">
+              {message.text}
+            </div>
+            {/* Conditionally render the SourceDocuments component */}
+            <SourceDocuments sources={message.sources} />
           </div>
         ))}
         {isLoading && (
-          <div className="message bot">
-            <div className="typing-indicator">
-              <span></span>
-              <span></span>
-              <span></span>
+          <div className="message-container bot">
+            <div className="message-bubble">
+              <div className="typing-indicator">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
             </div>
           </div>
         )}

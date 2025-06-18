@@ -38,25 +38,38 @@ body {
   gap: 12px;
 }
 
-.message {
+/* NEW: Container for the bubble and its sources */
+.message-container {
+  display: flex;
+  flex-direction: column;
+  max-width: 75%;
+}
+
+.message-container.user {
+  align-self: flex-end;
+}
+
+.message-container.bot {
+  align-self: flex-start;
+}
+
+/* UPDATED: Renamed from .message to .message-bubble */
+.message-bubble {
   padding: 10px 15px;
   border-radius: 18px;
-  max-width: 75%;
   line-height: 1.4;
   word-wrap: break-word;
 }
 
-.message.user {
+.message-container.user .message-bubble {
   background-color: #007bff;
   color: white;
-  align-self: flex-end;
   border-bottom-right-radius: 4px;
 }
 
-.message.bot {
+.message-container.bot .message-bubble {
   background-color: #e9e9eb;
   color: #333;
-  align-self: flex-start;
   border-bottom-left-radius: 4px;
 }
 
@@ -102,7 +115,6 @@ body {
   cursor: not-allowed;
 }
 
-/* Typing indicator animation */
 .typing-indicator {
   display: flex;
   align-items: center;
@@ -124,7 +136,6 @@ body {
   40% { transform: scale(1.0); }
 }
 
-/* --- Layout & Navigation --- */
 .header-content {
   display: flex;
   justify-content: space-between;
@@ -154,23 +165,19 @@ body {
   font-weight: bold;
 }
 
-/* The main content area needs to handle both chat and other pages */
 .content-area {
   flex-grow: 1;
   display: flex;
   flex-direction: column;
-  overflow-y: auto; /* Allows content inside to scroll */
+  overflow-y: auto;
 }
 
-/* Make chat component take up the full space */
 .content-area > div:has(.chat-window) {
   display: flex;
   flex-direction: column;
   flex-grow: 1;
 }
 
-
-/* --- Upload Component Styles --- */
 .upload-container {
   padding: 20px 30px;
   text-align: center;
@@ -230,7 +237,6 @@ body {
   border: 1px solid #f5c6cb;
 }
 
-/* --- NEW Progress Bar Styles --- */
 .progress-container {
   margin-top: 20px;
   width: 100%;
@@ -255,4 +261,59 @@ body {
   font-size: 14px;
   transition: width 0.2s ease-in-out;
   white-space: nowrap;
+}
+
+/* --- NEW Source Document Styles --- */
+.sources-wrapper {
+  margin-top: 8px;
+}
+
+.sources-container {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background-color: #f9f9f9;
+}
+
+.sources-summary {
+  padding: 8px 12px;
+  cursor: pointer;
+  font-weight: 500;
+  color: #555;
+  outline: none;
+}
+
+.sources-summary::marker {
+  color: #007bff;
+}
+
+.sources-list {
+  padding: 0 12px 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 250px; /* Prevent very long lists */
+  overflow-y: auto;
+}
+
+.source-item {
+  border: 1px solid #e0e0e0;
+  background-color: #fff;
+  padding: 10px;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.source-content {
+  margin: 0 0 8px 0;
+  color: #333;
+  white-space: pre-wrap; /* Respect newlines in the source text */
+}
+
+.source-metadata {
+  font-size: 12px;
+  color: #777;
+  display: flex;
+  justify-content: space-between;
+  border-top: 1px dashed #ccc;
+  padding-top: 6px;
 }
