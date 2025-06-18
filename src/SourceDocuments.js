@@ -15,11 +15,22 @@ function SourceDocuments({ sources }) {
         <div className="sources-list">
           {sources.map((source, index) => (
             <div key={index} className="source-item">
-              <p className="source-content">{source.page_content}</p>
-              <div className="source-metadata">
-                <span>Source: {source.metadata.source}</span>
-                <span>Page: {source.metadata.page}</span>
-              </div>
+              {/* --- ROBUST RENDERING LOGIC --- */}
+              {typeof source === 'object' && source !== null && source.page_content ? (
+                // This is the ideal case: we have a full document object
+                <>
+                  <p className="source-content">{source.page_content}</p>
+                  {source.metadata && (
+                    <div className="source-metadata">
+                      <span>Source: {source.metadata.source || 'N/A'}</span>
+                      <span>Page: {source.metadata.page !== undefined ? source.metadata.page : 'N/A'}</span>
+                    </div>
+                  )}
+                </>
+              ) : (
+                // This is the fallback case: the source is just a string
+                <p className="source-content">{String(source)}</p>
+              )}
             </div>
           ))}
         </div>
