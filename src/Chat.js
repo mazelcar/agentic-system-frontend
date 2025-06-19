@@ -4,24 +4,41 @@ import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useCaseContext } from './context/CaseContext';
 import TacSummary from './TacSummary';
-import SourceDocuments from './SourceDocuments';
+import NewCaseModal from './NewCaseModal'; // Import the new modal
 
 const API_URL = process.env.REACT_APP_API_URL;
 
 function Chat() {
-  const [messages, setMessages] = useState([
-    { text: "Hello! I'm the Network Troubleshooting Agent. How can I help you today?", sender: 'bot', sources: [] }
-  ]);
-  const [input, setInput] = useState('');
-  const [isChatLoading, setIsChatLoading] = useState(false);
+  // Global state for the active case
+  const { activeCaseId, setActiveCaseId } = useCaseContext();
 
-  const { activeCaseId } = useCaseContext();
+  // State for this component
   const [caseData, setCaseData] = useState(null);
   const [isSummaryLoading, setIsSummaryLoading] = useState(false);
   const [summaryError, setSummaryError] = useState(null);
 
-  const chatWindowRef = useRef(null);
+  const [recentCases, setRecentCases] = useState([]);
+  const [isCaseListLoading, setIsCaseListLoading] = useState(true);
 
+  const [showNewCaseModal, setShowNewCaseModal] = useState(false);
+
+  // --- This effect fetches the list of recent cases on initial load ---
+  useEffect(() => {
+    const fetchRecentCases = async () => {
+      try {
+        const response = await axios.get(`${API_URL}/cases`);
+        setRecentCases(response.data);
+      } catch (error) {
+        console.error("Failed to fetch recent cases:", error);
+        // Handle error gracefully in UI if needed
+      } finally {
+        setIsCaseListLoading(false);
+      }
+    };
+    fetchRecentCases();
+  }, []); // Empty dependency array means this runs only once on mount
+
+  // --- This effect fetches the data for the ACTIVE case ---
   useEffect(() => {
     const fetchCaseData = async () => {
       if (!activeCaseId) {
@@ -30,82 +47,79 @@ function Chat() {
       }
       setIsSummaryLoading(true);
       setSummaryError(null);
-      setCaseData(null);
       try {
         const response = await axios.get(`${API_URL}/case/${activeCaseId}`);
         setCaseData(response.data);
       } catch (error) {
         console.error("Failed to fetch case data:", error);
-        setSummaryError(`Could not load summary for case ${activeCaseId}. Please try analyzing it again.`);
+        setSummaryError(`Could not load summary for case ${activeCaseId}.`);
       } finally {
         setIsSummaryLoading(false);
       }
     };
     fetchCaseData();
-  }, [activeCaseId]);
+  }, [activeCaseId]); // Re-runs whenever activeCaseId changes
 
-  useEffect(() => {
-    if (chatWindowRef.current) {
-      chatWindowRef.current.scrollTop = chatWindowRef.current.scrollHeight;
-    }
-  }, [messages]);
-
-  const handleSend = async () => {
-    if (!input.trim() || isChatLoading) return;
-
-    const userMessage = { text: input, sender: 'user' };
-    setMessages(prev => [...prev, userMessage]);
-    const questionToAsk = input; // Capture input before clearing
-    setInput('');
-    setIsChatLoading(true);
-
-    try {
-      const response = await axios.post(`${API_URL}/ask`, { question: questionToAsk });
-      const botMessage = {
-        text: response.data.answer,
-        sender: 'bot',
-        sources: response.data.source_documents || []
-      };
-      setMessages(prev => [...prev, botMessage]);
-    } catch (error) {
-      const errorMessage = { text: `Sorry, an error occurred: ${error.message}`, sender: 'bot', sources: [] };
-      setMessages(prev => [...prev, errorMessage]);
-    } finally {
-      setIsChatLoading(false);
-    }
+  const handleCaseCreated = (newCaseId) => {
+    setActiveCaseId(newCaseId);
+    // Add new case to the top of the recent cases list
+    setRecentCases(prev => [newCaseId, ...prev.filter(id => id !== newCaseId)]);
+    setShowNewCaseModal(false);
   };
 
-  const handleKeyPress = (event) => {
-    if (event.key === 'Enter') handleSend();
-  };
+  // --- The "No Active Case" View ---
+  const renderNoActiveCaseView = () => (
+    <div className="no-case-view">
+      <h2>Welcome to the Workspace</h2>
+      <p>Please select a case to begin or create a new one.</p>
+      <div className="case-selection-actions">
+        <button onClick={() => setShowNewCaseModal(true)} className="btn-primary">
+          New Case
+        </button>
+        <div className="recent-cases-container">
+          <label htmlFor="recent-cases">Open Recent Case:</label>
+          <select
+            id="recent-cases"
+            onChange={(e) => setActiveCaseId(e.target.value)}
+            value={activeCaseId || ""}
+            disabled={isCaseListLoading}
+          >
+            <option value="" disabled>{isCaseListLoading ? "Loading..." : "Select a case"}</option>
+            {recentCases.map(caseId => (
+              <option key={caseId} value={caseId}>{caseId}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+    </div>
+  );
 
-  return (
+  // --- The "Workspace" View (with an active case) ---
+  const renderWorkspaceView = () => (
     <>
       {isSummaryLoading && <div className="tac-summary-widget loading">Loading Summary for Case {activeCaseId}...</div>}
       {summaryError && <div className="tac-summary-widget error">{summaryError}</div>}
       {caseData && <TacSummary caseData={caseData} />}
 
-      <div className="chat-window" ref={chatWindowRef}>
-        {messages.map((message, index) => (
-          <div key={index} className={`message-container ${message.sender}`}>
-            <div className="message-bubble">{message.text}</div>
-            <SourceDocuments sources={message.sources} />
-          </div>
-        ))}
-        {isChatLoading && (
-          <div className="message-container bot">
-            <div className="message-bubble"><div className="typing-indicator"><span /><span /><span /></div></div>
-          </div>
-        )}
-      </div>
+      {/* The Action/Notes Panel will go here in the next step */}
       <div className="chat-input">
-        {/* --- THIS IS THE FIX --- */}
-        <input type="text" value={input} onChange={(e) => setInput(e.target.value)} onKeyPress={handleKeyPress} placeholder="Ask a follow-up question..." disabled={isChatLoading} />
-        <button onClick={handleSend} disabled={isChatLoading}>
-          {isChatLoading ? '...' : 'Send'}
-        </button>
+        <input type="text" placeholder="Enter case notes or actions..." />
+        <button>Update Case</button>
       </div>
     </>
+  );
+
+  return (
+    <div className="workspace-container">
+      {showNewCaseModal && (
+        <NewCaseModal
+          onCaseCreated={handleCaseCreated}
+          onClose={() => setShowNewCaseModal(false)}
+        />
+      )}
+
+      {activeCaseId ? renderWorkspaceView() : renderNoActiveCaseView()}
+    </div>
   );
 }
 
