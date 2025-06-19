@@ -317,3 +317,87 @@ body {
   border-top: 1px dashed #ccc;
   padding-top: 6px;
 }
+
+
+/* --- NEW: Styles for AnalyzeCase Component --- */
+
+.analyze-case-container {
+  padding: 20px 30px;
+}
+
+.analyze-case-container h2 {
+  color: #333;
+  text-align: center;
+}
+
+.analyze-case-container p {
+  color: #666;
+  margin-bottom: 30px;
+  text-align: center;
+}
+
+.case-form {
+  max-width: 600px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.case-form .form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.case-form label {
+  margin-bottom: 0.5rem;
+  font-weight: bold;
+  color: #333;
+}
+
+.case-form input[type="text"],
+.case-form textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 1rem;
+  box-sizing: border-box;
+}
+
+.case-form textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.case-form button {
+  padding: 0.8rem;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.case-form button:disabled {
+  background-color: #a0c7e4;
+  cursor: not-allowed;
+}
+
+.case-form button:hover:not(:disabled) {
+  background-color: #0056b3;
+}
+
+.status-box {
+  margin-top: 2rem;
+  padding: 1rem;
+  border-radius: 8px;
+  background-color: #eef;
+  border: 1px solid #d6d6e7;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+  word-wrap: break-word;
+}

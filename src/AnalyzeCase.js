@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import './AnalyzeCase.css';
 
 // --- CORRECTED: Use the environment variable for the API URL ---
 const API_URL = process.env.REACT_APP_API_URL;
