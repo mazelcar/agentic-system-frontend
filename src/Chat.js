@@ -5,7 +5,7 @@ import axios from 'axios';
 import { useCaseContext } from './context/CaseContext';
 import TacSummary from './TacSummary';
 import NewCaseModal from './NewCaseModal';
-import SourceDocuments from './SourceDocuments'; // <-- IMPORT THE EXISTING COMPONENT
+import SourceDocuments from './SourceDocuments';
 
 const API_URL = process.env.REACT_APP_API_URL;
 
@@ -21,13 +21,12 @@ function Chat() {
   const [isCaseListLoading, setIsCaseListLoading] = useState(true);
   const [showNewCaseModal, setShowNewCaseModal] = useState(false);
 
-  // --- NEW STATE FOR INTERACTIVE WORKSPACE ---
+  // State for interactive workspace
   const [userInput, setUserInput] = useState('');
   const [isProcessingAction, setIsProcessingAction] = useState(false);
-  const [interactions, setInteractions] = useState([]); // To store the conversation
+  const [interactions, setInteractions] = useState([]);
   const logContainerRef = useRef(null);
 
-  // --- Reusable function to fetch case data ---
   const fetchCaseData = useCallback(async (id) => {
     if (!id) {
       setCaseData(null);
@@ -46,7 +45,6 @@ function Chat() {
     }
   }, []);
 
-  // Effect to fetch recent cases on mount
   useEffect(() => {
     const fetchRecentCases = async () => {
       try {
@@ -58,13 +56,13 @@ function Chat() {
     fetchRecentCases();
   }, []);
 
-  // Effect to fetch data when active case changes
   useEffect(() => {
-    fetchCaseData(activeCaseId);
-    setInteractions([]); // Clear interaction log when changing cases
+    if (activeCaseId) {
+      fetchCaseData(activeCaseId);
+      setInteractions([]);
+    }
   }, [activeCaseId, fetchCaseData]);
 
-  // Effect to scroll the interaction log
   useEffect(() => {
     if (logContainerRef.current) {
       logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
@@ -77,7 +75,6 @@ function Chat() {
     setShowNewCaseModal(false);
   };
 
-  // --- NEW: Unified function to handle all actions from the input bar ---
   const handleActionSubmit = async (e) => {
     e.preventDefault();
     if (!userInput.trim() || !activeCaseId) return;
@@ -88,7 +85,6 @@ function Chat() {
     setIsProcessingAction(true);
 
     try {
-      // Using the new unified '/action' endpoint
       const response = await axios.post(`${API_URL}/cases/${activeCaseId}/action`, {
         user_input: currentInput,
       });
@@ -98,7 +94,6 @@ function Chat() {
       if (type === 'answer') {
         setInteractions(prev => [...prev, { sender: 'agent', text: content, sources: sources || [] }]);
       } else if (type === 'update') {
-        // The update was successful, refresh the summary to show the change
         await fetchCaseData(activeCaseId);
         setInteractions(prev => [...prev, { sender: 'agent', text: "OK, I've updated the case summary.", sources: [] }]);
       }
@@ -111,7 +106,6 @@ function Chat() {
     }
   };
 
-  // --- The "No Active Case" View ---
   const renderNoActiveCaseView = () => (
     <div className="no-case-view">
       <h2>Welcome to the Workspace</h2>
@@ -129,28 +123,28 @@ function Chat() {
     </div>
   );
 
-  // --- The "Workspace" View (with an active case) ---
   const renderWorkspaceView = () => (
     <>
-      {isSummaryLoading && <div className="tac-summary-widget loading">Loading Summary for Case {activeCaseId}...</div>}
-      {summaryError && !isSummaryLoading && <div className="tac-summary-widget error">{summaryError}</div>}
-      {caseData && <TacSummary caseData={caseData} />}
-
-      {/* --- NEW: The Interaction Log --- */}
-      <div className="interaction-log-container" ref={logContainerRef}>
-        <div> {/* This inner div is for the flex-direction: column-reverse trick */}
-          {interactions.map((msg, index) => (
-            <div key={index} className={`interaction-message ${msg.sender}`}>
-              <strong>{msg.sender === 'user' ? 'You' : 'Agent'}</strong>
-              {msg.text}
-              {/* --- Render sources if they exist using the existing component --- */}
-              {msg.sources && msg.sources.length > 0 && <SourceDocuments sources={msg.sources} />}
-            </div>
-          ))}
-        </div>
+      {/* This wrapper allows the summary to scroll independently */}
+      <div className="tac-summary-wrapper">
+        {isSummaryLoading && <div className="tac-summary-widget loading">Loading Summary for Case {activeCaseId}...</div>}
+        {summaryError && !isSummaryLoading && <div className="tac-summary-widget error">{summaryError}</div>}
+        {caseData && <TacSummary caseData={caseData} />}
       </div>
 
-      {/* --- UPDATED: The Action Panel form --- */}
+      {/* The interaction log is now a sibling, not a child, of the summary */}
+      <div className="interaction-log-container" ref={logContainerRef}>
+        {interactions.map((msg, index) => (
+          <div key={index} className={`interaction-message-wrapper ${msg.sender}`}>
+            <div className={`interaction-message ${msg.sender}`}>
+              <strong>{msg.sender === 'user' ? 'You' : 'Agent'}</strong>
+              {msg.text}
+              {msg.sources && msg.sources.length > 0 && <SourceDocuments sources={msg.sources} />}
+            </div>
+          </div>
+        ))}
+      </div>
+
       <form className="chat-input" onSubmit={handleActionSubmit}>
         <input
           type="text"
