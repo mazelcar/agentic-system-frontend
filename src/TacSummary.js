@@ -1,7 +1,7 @@
 // src/TacSummary.js
 import React from 'react';
 
-// A small helper component for rendering sections
+// A small helper component to keep our JSX clean
 const SummarySection = ({ title, children }) => (
   <div className="summary-section">
     <h4>{title}</h4>
@@ -10,6 +10,7 @@ const SummarySection = ({ title, children }) => (
 );
 
 function TacSummary({ caseData }) {
+  // Show a loading state if data hasn't arrived yet
   if (!caseData) {
     return <div className="tac-summary-widget loading">Loading case data...</div>;
   }

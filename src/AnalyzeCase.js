@@ -3,8 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom'; // To navigate programmatically
-import { useCaseContext } from './CaseContext'; // Removed './context/'
-
+import { useCaseContext } from './context/CaseContext';
 const API_URL = process.env.REACT_APP_API_URL;
 
 function AnalyzeCase() {

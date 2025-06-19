@@ -1,18 +1,19 @@
 // src/context/CaseContext.js
-import React, { createContext, useState, useContext } from 'react'; // Corrected import
+import React, { createContext, useState, useContext } from 'react';
 
-// Create the context
+// 1. Create the context object
 const CaseContext = createContext();
 
-// Create a custom hook for easy access to the context
+// 2. Create a custom hook for easy consumption by other components
 export const useCaseContext = () => {
   return useContext(CaseContext);
 };
 
-// Create the Provider component
+// 3. Create the Provider component that will wrap our app
 export const CaseProvider = ({ children }) => {
   const [activeCaseId, setActiveCaseId] = useState(null);
 
+  // The value that will be available to all consuming components
   const value = {
     activeCaseId,
     setActiveCaseId,

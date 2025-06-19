@@ -6,7 +6,7 @@ import './App.css';
 import Chat from './Chat';
 import Upload from './Upload';
 import AnalyzeCase from './AnalyzeCase';
-import { CaseProvider } from './CaseContext'; // Removed './context/'
+import { CaseProvider } from './context/CaseContext';
 
 function App() {
   return (

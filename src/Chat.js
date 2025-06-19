@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { useCaseContext } from './CaseContext'; // Corrected import path
+import { useCaseContext } from './context/CaseContext';
 import TacSummary from './TacSummary';
 import SourceDocuments from './SourceDocuments';
 
