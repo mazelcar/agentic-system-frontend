@@ -271,3 +271,57 @@ body {
 .btn-primary { background-color: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 1rem; }
 .btn-primary:disabled { background-color: #a0c7ff; }
 .btn-secondary { background-color: #6c757d; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 1rem; }
+
+/* --- Styles for Evidence Drill-Down --- */
+.summary-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.summary-section-header h4 {
+  margin: 0; /* Remove default margin from h4 */
+}
+
+.view-evidence-btn {
+  background-color: #e9ecef;
+  border: 1px solid #dee2e6;
+  color: #495057;
+  padding: 4px 10px;
+  font-size: 12px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.view-evidence-btn:hover {
+  background-color: #ced4da;
+  border-color: #adb5bd;
+}
+
+/* --- Styles for Evidence Modal --- */
+.modal-content.evidence-modal {
+  max-width: 90%;
+  width: 800px;
+  height: 80%;
+  display: flex;
+  flex-direction: column;
+}
+
+.evidence-content {
+  flex-grow: 1;
+  overflow-y: auto;
+  background-color: #2b2b2b;
+  color: #f8f8f2;
+  font-family: 'Courier New', Courier, monospace;
+  padding: 15px;
+  border-radius: 4px;
+  border: 1px solid #444;
+}
+
+.evidence-content pre {
+  margin: 0;
+  white-space: pre-wrap; /* Wrap long lines */
+  word-wrap: break-word;
+}

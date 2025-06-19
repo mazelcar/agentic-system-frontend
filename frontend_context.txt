@@ -1,0 +1,1134 @@
+--- Project Context: frontend ---
+Generated on: 2025-06-19 16:52:08
+
+--- Directory Structure ---
+├── .gitignore
+├── package.json
+├── README.md
+├── public/
+│   ├── index.html
+│   ├── manifest.json
+│   └── robots.txt
+└── src/
+    ├── AnalyzeCase.js
+    ├── App.css
+    ├── App.js
+    ├── App.test.js
+    ├── Chat.js
+    ├── index.css
+    ├── index.js
+    ├── NewCaseModal.js
+    ├── SourceDocuments.js
+    ├── TacSummary.js
+    ├── Upload.js
+    └── context/
+        └── CaseContext.js
+
+--- File Contents ---
+
+### package.json ###
+```
+{
+  "name": "frontend",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "@testing-library/dom": "^10.4.0",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^13.5.0",
+    "axios": "^1.10.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-router-dom": "^7.6.2",
+    "react-scripts": "5.0.1",
+    "web-vitals": "^2.1.4"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}
+
+```
+
+### public/index.html ###
+```
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#000000" />
+    <meta
+      name="description"
+      content="Web site created using create-react-app"
+    />
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
+    <!--
+      manifest.json provides metadata used when your web app is installed on a
+      user's mobile device or desktop. See https://developers.google.com/web/fundamentals/web-app-manifest/
+    -->
+    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+    <!--
+      Notice the use of %PUBLIC_URL% in the tags above.
+      It will be replaced with the URL of the `public` folder during the build.
+      Only files inside the `public` folder can be referenced from the HTML.
+
+      Unlike "/favicon.ico" or "favicon.ico", "%PUBLIC_URL%/favicon.ico" will
+      work correctly both with client-side routing and a non-root public URL.
+      Learn how to configure a non-root public URL by running `npm run build`.
+    -->
+    <title>React App</title>
+  </head>
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root"></div>
+    <!--
+      This HTML file is a template.
+      If you open it directly in the browser, you will see an empty page.
+
+      You can add webfonts, meta tags, or analytics to this file.
+      The build step will place the bundled scripts into the <body> tag.
+
+      To begin the development, run `npm start` or `yarn start`.
+      To create a production bundle, use `npm run build` or `yarn build`.
+    -->
+  </body>
+</html>
+
+```
+
+### src/AnalyzeCase.js ###
+```
+// src/AnalyzeCase.js
+
+import React, { useState, useEffect, useRef } from 'react';
+import axios from 'axios';
+import { useNavigate } from 'react-router-dom'; // To navigate programmatically
+import { useCaseContext } from './context/CaseContext';
+const API_URL = process.env.REACT_APP_API_URL;
+
+function AnalyzeCase() {
+  const [caseId, setCaseId] = useState('');
+  const [reportedIssue, setReportedIssue] = useState('');
+  const [logFile, setLogFile] = useState(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [statusMessage, setStatusMessage] = useState('');
+  const [taskId, setTaskId] = useState(null);
+
+  const intervalRef = useRef(null);
+  const navigate = useNavigate(); // Hook for navigation
+  const { setActiveCaseId } = useCaseContext(); // Get the setter from our context
+
+  useEffect(() => {
+    if (taskId) {
+      pollStatus(taskId);
+      intervalRef.current = setInterval(() => pollStatus(taskId), 3000);
+    }
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, [taskId]);
+
+  const handleFileChange = (e) => {
+    setLogFile(e.target.files[0]);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!caseId || !reportedIssue || !logFile) {
+      setStatusMessage('Please fill out all fields and select a file.');
+      return;
+    }
+    setIsProcessing(true);
+    setStatusMessage('Uploading file and starting analysis...');
+    const formData = new FormData();
+    formData.append('case_id', caseId);
+    formData.append('reported_issue', reportedIssue);
+    formData.append('log_file', logFile);
+
+    try {
+      const response = await axios.post(`${API_URL}/analyze_case`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      setStatusMessage('Analysis in progress... Polling for status.');
+      setTaskId(response.data.task_id);
+    } catch (error) {
+      setStatusMessage(`Error: ${error.response?.data?.detail || error.message}`);
+      setIsProcessing(false);
+    }
+  };
+
+  const pollStatus = async (currentTaskId) => {
+    try {
+      const response = await axios.get(`${API_URL}/case/status/${currentTaskId}`);
+      const task = response.data;
+
+      switch (task.status) {
+        case 'SUCCESS':
+          clearInterval(intervalRef.current);
+          setStatusMessage(`Analysis for Case ID ${caseId} is complete! Navigating to summary...`);
+          // --- THIS IS THE NEW LOGIC ---
+          // 1. Set the active case ID in our global context
+          setActiveCaseId(caseId);
+          // 2. Navigate the user to the chat page to see the summary
+          setTimeout(() => navigate('/'), 1500); // Navigate after a short delay
+          break;
+        case 'FAILURE':
+          setStatusMessage(`Analysis failed. Error: ${JSON.stringify(task.result)}`);
+          clearInterval(intervalRef.current);
+          setIsProcessing(false);
+          setTaskId(null);
+          break;
+        default:
+          setStatusMessage(`Polling... Status: ${task.status}`);
+      }
+    } catch (error) {
+      setStatusMessage('Error polling for status. Check the console.');
+      clearInterval(intervalRef.current);
+      setIsProcessing(false);
+      setTaskId(null);
+    }
+  };
+
+  return (
+    <div className="analyze-case-container">
+      <h2>Analyze New Case</h2>
+      <p>Upload the pre-processed log file to have the AI generate a TAC Summary.</p>
+      <form onSubmit={handleSubmit} className="case-form">
+        {/* Form inputs are unchanged */}
+        <div className="form-group">
+          <label htmlFor="caseId">Case ID</label>
+          <input type="text" id="caseId" value={caseId} onChange={(e) => setCaseId(e.target.value)} placeholder="e.g., 03457611" required disabled={isProcessing} />
+        </div>
+        <div className="form-group">
+          <label htmlFor="reportedIssue">Customer Reported Issue</label>
+          <textarea id="reportedIssue" value={reportedIssue} onChange={(e) => setReportedIssue(e.target.value)} placeholder="e.g., 'ONT is stuck in a discovery loop.'" rows="4" required disabled={isProcessing} />
+        </div>
+        <div className="form-group">
+          <label htmlFor="logFile">Extracted Log File (.txt)</label>
+          <input type="file" id="logFile" accept=".txt" onChange={handleFileChange} required disabled={isProcessing} />
+        </div>
+        <button type="submit" disabled={isProcessing}>
+          {isProcessing ? 'Analyzing...' : 'Start Analysis'}
+        </button>
+      </form>
+      {statusMessage && (
+        <div className="status-box">
+          <strong>Status:</strong> {statusMessage}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default AnalyzeCase;
+```
+
+### src/App.css ###
+```
+/* src/App.css */
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #f0f2f5;
+}
+
+.App {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  max-width: 800px;
+  margin: 0 auto;
+  background-color: #fff;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+.header {
+  background-color: #007bff;
+  color: white;
+  padding: 15px 20px;
+  text-align: center;
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0; /* Prevent header from shrinking */
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.navigation {
+  display: flex;
+  gap: 10px;
+}
+
+.nav-link {
+  color: white;
+  text-decoration: none;
+  padding: 8px 12px;
+  border-radius: 6px;
+  transition: background-color 0.2s;
+}
+
+.nav-link:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.nav-link.active {
+  background-color: rgba(255, 255, 255, 0.3);
+  font-weight: bold;
+}
+
+.content-area {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* Prevent double scrollbars */
+}
+
+.chat-input {
+  display: flex;
+  padding: 15px;
+  border-top: 1px solid #ddd;
+  background-color: #f9f9f9;
+  flex-shrink: 0; /* Prevent input from shrinking */
+}
+
+.chat-input input {
+  flex-grow: 1;
+  border: 1px solid #ccc;
+  border-radius: 20px;
+  padding: 12px 18px;
+  font-size: 16px;
+  margin-right: 10px;
+  outline: none;
+}
+
+.chat-input input:focus {
+  border-color: #007bff;
+}
+
+.chat-input button {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 12px 25px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: bold;
+  transition: background-color 0.2s;
+}
+
+.chat-input button:hover:not(:disabled) {
+  background-color: #0056b3;
+}
+
+.chat-input button:disabled {
+  background-color: #a0c7ff;
+  cursor: not-allowed;
+}
+
+/* --- Original styles for Upload component --- */
+.upload-container {
+  padding: 20px 30px;
+  text-align: center;
+}
+.upload-container h2 { color: #333; }
+.upload-container p { color: #666; margin-bottom: 30px; }
+.upload-form { display: flex; flex-direction: column; align-items: center; gap: 20px; }
+.file-input { font-size: 16px; padding: 10px; border: 1px solid #ccc; border-radius: 8px; width: 100%; max-width: 400px; }
+.status-message { margin-top: 20px; padding: 12px; border-radius: 8px; font-weight: 500; max-width: 600px; margin-left: auto; margin-right: auto; word-wrap: break-word; }
+.status-message.idle { background-color: #e2e3e5; color: #383d41; border: 1px solid #d6d8db; }
+.status-message.success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+.status-message.error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+.progress-container { margin-top: 20px; width: 100%; max-width: 600px; margin-left: auto; margin-right: auto; }
+.progress-bar-container { background-color: #e9ecef; border-radius: 8px; overflow: hidden; border: 1px solid #ced4da; }
+.progress-bar { background-color: #007bff; color: white; padding: 4px 0; text-align: center; font-weight: bold; font-size: 14px; transition: width 0.2s ease-in-out; white-space: nowrap; }
+
+/* --- Original and new styles for Sources --- */
+.sources-wrapper {
+  margin-top: 8px;
+}
+.sources-container {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background-color: #f9f9f9;
+}
+.sources-summary {
+  padding: 8px 12px;
+  cursor: pointer;
+  font-weight: 500;
+  color: #555;
+  outline: none;
+}
+.sources-summary::marker {
+  color: #007bff;
+}
+.sources-list {
+  padding: 0 12px 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 250px;
+  overflow-y: auto;
+}
+.source-item {
+  border: 1px solid #e0e0e0;
+  background-color: #fff;
+  padding: 10px;
+  border-radius: 6px;
+  font-size: 14px;
+}
+.source-content {
+  margin: 0 0 8px 0;
+  color: #333;
+  white-space: pre-wrap;
+}
+.source-metadata {
+  font-size: 12px;
+  color: #777;
+  display: flex;
+  justify-content: space-between;
+  border-top: 1px dashed #ccc;
+  padding-top: 6px;
+}
+
+/* --- Original styles for AnalyzeCase Component --- */
+.analyze-case-container {
+  padding: 20px 30px;
+  overflow-y: auto;
+}
+.analyze-case-container h2, .analyze-case-container p { text-align: center; }
+.case-form { max-width: 600px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+.case-form .form-group { display: flex; flex-direction: column; }
+.case-form label { margin-bottom: 0.5rem; font-weight: bold; color: #333; }
+.case-form input[type="text"], .case-form textarea { width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; box-sizing: border-box; }
+.case-form textarea { resize: vertical; min-height: 80px; }
+.case-form button { padding: 0.8rem; background-color: #007bff; color: white; border: none; border-radius: 8px; font-size: 1.1rem; cursor: pointer; transition: background-color 0.2s; }
+.case-form button:disabled { background-color: #a0c7e4; cursor: not-allowed; }
+.case-form button:hover:not(:disabled) { background-color: #0056b3; }
+.status-box { margin-top: 2rem; padding: 1rem; border-radius: 8px; background-color: #eef; border: 1px solid #d6d6e7; max-width: 600px; margin-left: auto; margin-right: auto; word-wrap: break-word; }
+
+/* --- MODIFIED Styles for TacSummary Widget --- */
+.tac-summary-wrapper {
+  overflow-y: auto; /* This makes ONLY the summary scrollable */
+  flex-grow: 1;
+}
+.tac-summary-widget {
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 20px;
+  margin: 20px;
+  font-size: 15px;
+}
+.tac-summary-widget.loading, .tac-summary-widget.error { text-align: center; color: #6c757d; padding: 40px 20px; }
+.tac-summary-widget.error { background-color: #f8d7da; color: #721c24; border-color: #f5c6cb; }
+.tac-summary-widget h3 { margin-top: 0; color: #0056b3; border-bottom: 2px solid #007bff; padding-bottom: 10px; margin-bottom: 20px; }
+.summary-section { margin-bottom: 20px; }
+.summary-section:last-child { margin-bottom: 0; }
+.summary-section h4 { margin-bottom: 8px; color: #343a40; font-size: 16px; }
+.summary-section p, .summary-section li { margin: 4px 0; line-height: 1.6; color: #495057; }
+.summary-section p strong { color: #212529; }
+.summary-section ul { padding-left: 20px; margin-top: 5px; margin-bottom: 5px; }
+
+/* --- MODIFIED Styles for Workspace & No Case View --- */
+.workspace-container {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  overflow: hidden; /* Important for child scrolling */
+}
+.no-case-view {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 40px;
+  flex-grow: 1;
+  background-color: #f8f9fa;
+}
+.no-case-view h2 { color: #343a40; }
+.no-case-view p { color: #6c757d; font-size: 1.1rem; margin-bottom: 30px; }
+.case-selection-actions { display: flex; gap: 20px; align-items: center; }
+.recent-cases-container select { font-size: 1rem; padding: 10px; border-radius: 6px; border: 1px solid #ced4da; }
+
+/* --- MODIFIED Styles for Interaction Log --- */
+.interaction-log-container {
+  padding: 10px 20px;
+  max-height: 200px;
+  overflow-y: auto;
+  border-top: 1px solid #eee;
+  flex-shrink: 0; /* Prevent log from shrinking */
+}
+.interaction-message-wrapper { /* New wrapper for alignment */
+  display: flex;
+  flex-direction: column;
+  margin-top: 12px;
+}
+.interaction-message-wrapper.user { align-items: flex-end; }
+.interaction-message-wrapper.agent { align-items: flex-start; }
+.interaction-message {
+  padding: 10px 15px;
+  border-radius: 18px;
+  line-height: 1.4;
+  word-wrap: break-word;
+  max-width: 80%;
+  display: inline-block;
+}
+.interaction-message.user { background-color: #007bff; color: white; border-bottom-right-radius: 4px; }
+.interaction-message.agent { background-color: #e9e9eb; color: #333; border-bottom-left-radius: 4px; white-space: pre-wrap; }
+.interaction-message strong { font-weight: bold; display: block; margin-bottom: 4px; font-size: 12px; opacity: 0.8; }
+
+/* --- Original Modal Styles --- */
+.modal-backdrop { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); display: flex; justify-content: center; align-items: center; z-index: 1000; }
+.modal-content { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); width: 100%; max-width: 500px; }
+.modal-content h2 { margin-top: 0; }
+.modal-error { color: #721c24; background-color: #f8d7da; border: 1px solid #f5c6cb; padding: 10px; border-radius: 4px; margin-top: 0; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+.btn-primary { background-color: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 1rem; }
+.btn-primary:disabled { background-color: #a0c7ff; }
+.btn-secondary { background-color: #6c757d; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 1rem; }
+```
+
+### src/App.js ###
+```
+// src/App.js
+
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, NavLink } from 'react-router-dom';
+import './App.css';
+import Chat from './Chat';
+import Upload from './Upload';
+import AnalyzeCase from './AnalyzeCase';
+import { CaseProvider } from './context/CaseContext';
+
+function App() {
+  return (
+    // Wrap the entire application in the CaseProvider
+    <CaseProvider>
+      <Router>
+        <div className="App">
+          <div className="header">
+            <div className="header-content">
+              <h1>Network Engineer Agent</h1>
+              <nav className="navigation">
+                <NavLink to="/" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
+                  Chat
+                </NavLink>
+                <NavLink to="/upload" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
+                  Upload KB
+                </NavLink>
+                <NavLink to="/analyze" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
+                  Analyze Case
+                </NavLink>
+              </nav>
+            </div>
+          </div>
+
+          <div className="content-area">
+            <Routes>
+              <Route path="/" element={<Chat />} />
+              <Route path="/upload" element={<Upload />} />
+              <Route path="/analyze" element={<AnalyzeCase />} />
+            </Routes>
+          </div>
+        </div>
+      </Router>
+    </CaseProvider>
+  );
+}
+
+export default App;
+```
+
+### src/App.test.js ###
+```
+import { render, screen } from '@testing-library/react';
+import App from './App';
+
+test('renders learn react link', () => {
+  render(<App />);
+  const linkElement = screen.getByText(/learn react/i);
+  expect(linkElement).toBeInTheDocument();
+});
+
+```
+
+### src/Chat.js ###
+```
+// src/Chat.js
+
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import axios from 'axios';
+import { useCaseContext } from './context/CaseContext';
+import TacSummary from './TacSummary';
+import NewCaseModal from './NewCaseModal';
+import SourceDocuments from './SourceDocuments';
+
+const API_URL = process.env.REACT_APP_API_URL;
+
+function Chat() {
+  // Global state
+  const { activeCaseId, setActiveCaseId } = useCaseContext();
+
+  // Component State
+  const [caseData, setCaseData] = useState(null);
+  const [isSummaryLoading, setIsSummaryLoading] = useState(false);
+  const [summaryError, setSummaryError] = useState(null);
+  const [recentCases, setRecentCases] = useState([]);
+  const [isCaseListLoading, setIsCaseListLoading] = useState(true);
+  const [showNewCaseModal, setShowNewCaseModal] = useState(false);
+
+  // State for interactive workspace
+  const [userInput, setUserInput] = useState('');
+  const [isProcessingAction, setIsProcessingAction] = useState(false);
+  const [interactions, setInteractions] = useState([]);
+  const logContainerRef = useRef(null);
+
+  const fetchCaseData = useCallback(async (id) => {
+    if (!id) {
+      setCaseData(null);
+      return;
+    }
+    setIsSummaryLoading(true);
+    setSummaryError(null);
+    try {
+      const response = await axios.get(`${API_URL}/case/${id}`);
+      setCaseData(response.data);
+    } catch (error) {
+      console.error("Failed to fetch case data:", error);
+      setSummaryError(`Could not load summary for case ${id}.`);
+    } finally {
+      setIsSummaryLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const fetchRecentCases = async () => {
+      try {
+        const response = await axios.get(`${API_URL}/cases`);
+        setRecentCases(response.data);
+      } catch (error) { console.error("Failed to fetch recent cases:", error); }
+      finally { setIsCaseListLoading(false); }
+    };
+    fetchRecentCases();
+  }, []);
+
+  useEffect(() => {
+    if (activeCaseId) {
+      fetchCaseData(activeCaseId);
+      setInteractions([]);
+    }
+  }, [activeCaseId, fetchCaseData]);
+
+  useEffect(() => {
+    if (logContainerRef.current) {
+      logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
+    }
+  }, [interactions]);
+
+  const handleCaseCreated = (newCaseId) => {
+    setActiveCaseId(newCaseId);
+    setRecentCases(prev => [newCaseId, ...prev.filter(id => id !== newCaseId)]);
+    setShowNewCaseModal(false);
+  };
+
+  const handleActionSubmit = async (e) => {
+    e.preventDefault();
+    if (!userInput.trim() || !activeCaseId) return;
+
+    const currentInput = userInput;
+    setInteractions(prev => [...prev, { sender: 'user', text: currentInput }]);
+    setUserInput('');
+    setIsProcessingAction(true);
+
+    try {
+      const response = await axios.post(`${API_URL}/cases/${activeCaseId}/action`, {
+        user_input: currentInput,
+      });
+
+      const { type, content, sources } = response.data;
+
+      if (type === 'answer') {
+        setInteractions(prev => [...prev, { sender: 'agent', text: content, sources: sources || [] }]);
+      } else if (type === 'update') {
+        await fetchCaseData(activeCaseId);
+        setInteractions(prev => [...prev, { sender: 'agent', text: "OK, I've updated the case summary.", sources: [] }]);
+      }
+    } catch (error) {
+      console.error("Failed to process action:", error);
+      const errorMsg = `Error: ${error.response?.data?.detail || error.message}`;
+      setInteractions(prev => [...prev, { sender: 'agent', text: errorMsg, sources: [] }]);
+    } finally {
+      setIsProcessingAction(false);
+    }
+  };
+
+  const renderNoActiveCaseView = () => (
+    <div className="no-case-view">
+      <h2>Welcome to the Workspace</h2>
+      <p>Please select a case to begin or create a new one.</p>
+      <div className="case-selection-actions">
+        <button onClick={() => setShowNewCaseModal(true)} className="btn-primary">New Case</button>
+        <div className="recent-cases-container">
+          <label htmlFor="recent-cases">Open Recent Case:</label>
+          <select id="recent-cases" onChange={(e) => setActiveCaseId(e.target.value)} value={activeCaseId || ""} disabled={isCaseListLoading}>
+            <option value="" disabled>{isCaseListLoading ? "Loading..." : "Select a case"}</option>
+            {recentCases.map(caseId => (<option key={caseId} value={caseId}>{caseId}</option>))}
+          </select>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderWorkspaceView = () => (
+    <>
+      {/* This wrapper allows the summary to scroll independently */}
+      <div className="tac-summary-wrapper">
+        {isSummaryLoading && <div className="tac-summary-widget loading">Loading Summary for Case {activeCaseId}...</div>}
+        {summaryError && !isSummaryLoading && <div className="tac-summary-widget error">{summaryError}</div>}
+        {caseData && <TacSummary caseData={caseData} />}
+      </div>
+
+      {/* The interaction log is now a sibling, not a child, of the summary */}
+      <div className="interaction-log-container" ref={logContainerRef}>
+        {interactions.map((msg, index) => (
+          <div key={index} className={`interaction-message-wrapper ${msg.sender}`}>
+            <div className={`interaction-message ${msg.sender}`}>
+              <strong>{msg.sender === 'user' ? 'You' : 'Agent'}</strong>
+              {msg.text}
+              {msg.sources && msg.sources.length > 0 && <SourceDocuments sources={msg.sources} />}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <form className="chat-input" onSubmit={handleActionSubmit}>
+        <input
+          type="text"
+          placeholder={isProcessingAction ? "Agent is thinking..." : "Provide data or ask a question..."}
+          value={userInput}
+          onChange={(e) => setUserInput(e.target.value)}
+          disabled={isProcessingAction || isSummaryLoading}
+        />
+        <button type="submit" disabled={isProcessingAction || isSummaryLoading || !userInput.trim()}>
+          {isProcessingAction ? '...' : 'Submit'}
+        </button>
+      </form>
+    </>
+  );
+
+  return (
+    <div className="workspace-container">
+      {showNewCaseModal && <NewCaseModal onCaseCreated={handleCaseCreated} onClose={() => setShowNewCaseModal(false)} />}
+      {activeCaseId ? renderWorkspaceView() : renderNoActiveCaseView()}
+    </div>
+  );
+}
+
+export default Chat;
+```
+
+### src/index.css ###
+```
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+```
+
+### src/index.js ###
+```
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import './index.css';
+import App from './App';
+import reportWebVitals from './reportWebVitals';
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
+
+// If you want to start measuring performance in your app, pass a function
+// to log results (for example: reportWebVitals(console.log))
+// or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
+reportWebVitals();
+
+```
+
+### src/NewCaseModal.js ###
+```
+// src/NewCaseModal.js
+import React, { useState } from 'react';
+import axios from 'axios';
+
+const API_URL = process.env.REACT_APP_API_URL;
+
+function NewCaseModal({ onCaseCreated, onClose }) {
+  const [caseId, setCaseId] = useState('');
+  const [initialIssue, setInitialIssue] = useState('');
+  const [error, setError] = useState('');
+  const [isCreating, setIsCreating] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!caseId.trim() || !initialIssue.trim()) {
+      setError('Both Case ID and Initial Issue are required.');
+      return;
+    }
+    setError('');
+    setIsCreating(true);
+
+    try {
+      await axios.post(`${API_URL}/cases`, {
+        case_id: caseId,
+        initial_issue: initialIssue,
+      });
+      // On success, call the callback function passed from the parent
+      onCaseCreated(caseId);
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Failed to create case.');
+      console.error(err);
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  return (
+    <div className="modal-backdrop">
+      <div className="modal-content">
+        <h2>Create New Case</h2>
+        <form onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label htmlFor="new-case-id">Case ID</label>
+            <input
+              id="new-case-id"
+              type="text"
+              value={caseId}
+              onChange={(e) => setCaseId(e.target.value)}
+              placeholder="Enter a unique case number"
+              disabled={isCreating}
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="initial-issue">Initial Issue Description</label>
+            <textarea
+              id="initial-issue"
+              value={initialIssue}
+              onChange={(e) => setInitialIssue(e.target.value)}
+              rows="4"
+              placeholder="Briefly describe the problem..."
+              disabled={isCreating}
+            />
+          </div>
+          {error && <p className="modal-error">{error}</p>}
+          <div className="modal-actions">
+            <button type="button" onClick={onClose} disabled={isCreating} className="btn-secondary">
+              Cancel
+            </button>
+            <button type="submit" disabled={isCreating} className="btn-primary">
+              {isCreating ? 'Creating...' : 'Create Case'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+export default NewCaseModal;
+```
+
+### src/SourceDocuments.js ###
+```
+// src/SourceDocuments.js
+
+import React from 'react';
+
+function SourceDocuments({ sources }) {
+  // Don't render anything if sources are not provided or empty
+  if (!sources || sources.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="sources-wrapper">
+      <details className="sources-container">
+        <summary className="sources-summary">Show Sources</summary>
+        <div className="sources-list">
+          {sources.map((source, index) => (
+            <div key={index} className="source-item">
+              {/* --- ROBUST RENDERING LOGIC --- */}
+              {typeof source === 'object' && source !== null && source.page_content ? (
+                // This is the ideal case: we have a full document object
+                <>
+                  <p className="source-content">{source.page_content}</p>
+                  {source.metadata && (
+                    <div className="source-metadata">
+                      <span>Source: {source.metadata.source || 'N/A'}</span>
+                      <span>Page: {source.metadata.page !== undefined ? source.metadata.page : 'N/A'}</span>
+                    </div>
+                  )}
+                </>
+              ) : (
+                // This is the fallback case: the source is just a string
+                <p className="source-content">{String(source)}</p>
+              )}
+            </div>
+          ))}
+        </div>
+      </details>
+    </div>
+  );
+}
+
+export default SourceDocuments;
+```
+
+### src/TacSummary.js ###
+```
+// src/TacSummary.js
+import React from 'react';
+
+// A small helper component to keep our JSX clean
+const SummarySection = ({ title, children }) => (
+  <div className="summary-section">
+    <h4>{title}</h4>
+    {children}
+  </div>
+);
+
+function TacSummary({ caseData }) {
+  // Show a loading state if data hasn't arrived yet
+  if (!caseData) {
+    return <div className="tac-summary-widget loading">Loading case data...</div>;
+  }
+
+  const { network_info, reported_issue, tac_notes, recommendations, next_steps } = caseData;
+
+  return (
+    <div className="tac-summary-widget">
+      <h3>TAC Summary for Case: {caseData.case_id}</h3>
+
+      <SummarySection title="Network Info">
+        <p><strong>Platform:</strong> {network_info?.access_platform || 'N/A'}</p>
+        <p><strong>SW Version:</strong> {network_info?.software_version || 'N/A'}</p>
+        <p><strong>Affected Device:</strong> {network_info?.affected_device || 'N/A'}</p>
+        <p><strong>Affected Interface:</strong> {network_info?.affected_interface || 'N/A'}</p>
+      </SummarySection>
+
+      <SummarySection title="Reported Issue">
+        <p>{reported_issue || 'N/A'}</p>
+      </SummarySection>
+
+      <SummarySection title="TAC Notes">
+        <p><strong>ERPS Analysis:</strong> {tac_notes?.erps_analysis || 'N/A'}</p>
+        <p><strong>Interface Analysis:</strong> {tac_notes?.interface_analysis || 'N/A'}</p>
+        <p><strong>Alarm Analysis:</strong> {tac_notes?.alarm_analysis || 'N/A'}</p>
+        <p><strong>Correlation:</strong> {tac_notes?.correlation || 'N/A'}</p>
+      </SummarySection>
+
+      <SummarySection title="Recommendations">
+        <ul>
+          {recommendations?.map((rec, index) => (
+            <li key={index}>{rec}</li>
+          )) || <li>N/A</li>}
+        </ul>
+      </SummarySection>
+
+      <SummarySection title="Next Steps">
+        <p>{next_steps || 'N/A'}</p>
+      </SummarySection>
+    </div>
+  );
+}
+
+export default TacSummary;
+```
+
+### src/Upload.js ###
+```
+// src/Upload.js
+
+import React, { useState } from 'react';
+import axios from 'axios'; // Import axios
+
+// --- CONFIGURATION ---
+const API_URL = process.env.REACT_APP_API_URL;
+
+function Upload() {
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [uploadStatus, setUploadStatus] = useState('idle'); // idle, uploading, success, error
+  const [statusMessage, setStatusMessage] = useState('');
+  const [uploadProgress, setUploadProgress] = useState(0); // New state for progress percentage
+
+  const handleFileChange = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      setSelectedFile(file);
+      setUploadStatus('idle'); // Reset status when a new file is chosen
+      setStatusMessage(`${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`);
+    }
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    if (!selectedFile) {
+      setStatusMessage('Please select a file first.');
+      setUploadStatus('error');
+      return;
+    }
+
+    setUploadStatus('uploading');
+    setStatusMessage('Uploading document...');
+    setUploadProgress(0); // Reset progress to 0 on new upload
+
+    const formData = new FormData();
+    formData.append('file', selectedFile);
+
+    try {
+      // --- AXIOS UPLOAD LOGIC ---
+      const response = await axios.post(`${API_URL}/upload_kb`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        onUploadProgress: (progressEvent) => {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          setUploadProgress(percentCompleted);
+        },
+      });
+
+      setUploadStatus('success');
+      setStatusMessage(`Success! Document "${selectedFile.name}" ingested into the knowledge base.`);
+      setSelectedFile(null); // Clear the file input
+      event.target.reset(); // Reset the form
+    } catch (error) {
+      setUploadStatus('error');
+      // Axios wraps the server response in error.response
+      const serverMessage = error.response?.data?.detail || error.message;
+      setStatusMessage(`Upload failed: ${serverMessage}`);
+      console.error('Upload error:', error);
+    }
+  };
+
+  return (
+    <div className="upload-container">
+      <h2>Upload Knowledge Base Document</h2>
+      <p>Upload a PDF document to add it to the agent's knowledge base.</p>
+      <form onSubmit={handleSubmit} className="upload-form">
+        <input
+          type="file"
+          accept=".pdf"
+          onChange={handleFileChange}
+          className="file-input"
+          disabled={uploadStatus === 'uploading'}
+        />
+        <button type="submit" disabled={!selectedFile || uploadStatus === 'uploading'}>
+          {uploadStatus === 'uploading' ? 'Uploading...' : 'Upload to KB'}
+        </button>
+      </form>
+
+      {/* Display progress bar ONLY during upload */}
+      {uploadStatus === 'uploading' && (
+        <div className="progress-container">
+          <div className="progress-bar-container">
+            <div className="progress-bar" style={{ width: `${uploadProgress}%` }}>
+              {uploadProgress}%
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Display status message for idle, success, or error states */}
+      {statusMessage && uploadStatus !== 'uploading' && (
+        <div className={`status-message ${uploadStatus}`}>
+          {statusMessage}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default Upload;
+```
+
+### src/context/CaseContext.js ###
+```
+// src/context/CaseContext.js
+import React, { createContext, useState, useContext } from 'react';
+
+// 1. Create the context object
+const CaseContext = createContext();
+
+// 2. Create a custom hook for easy consumption by other components
+export const useCaseContext = () => {
+  return useContext(CaseContext);
+};
+
+// 3. Create the Provider component that will wrap our app
+export const CaseProvider = ({ children }) => {
+  const [activeCaseId, setActiveCaseId] = useState(null);
+
+  // The value that will be available to all consuming components
+  const value = {
+    activeCaseId,
+    setActiveCaseId,
+  };
+
+  return <CaseContext.Provider value={value}>{children}</CaseContext.Provider>;
+};
+```
+
+--- Statistics ---
+Total Files Scanned (excluding noise): 18
+Files with Full Content Included: 14
+Files Listed in Structure Only: 4

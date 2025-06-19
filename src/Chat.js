@@ -6,6 +6,7 @@ import { useCaseContext } from './context/CaseContext';
 import TacSummary from './TacSummary';
 import NewCaseModal from './NewCaseModal';
 import SourceDocuments from './SourceDocuments';
+import EvidenceModal from './EvidenceModal'; // <-- IMPORT THE NEW COMPONENT
 
 const API_URL = process.env.REACT_APP_API_URL;
 
@@ -25,6 +26,7 @@ function Chat() {
   const [userInput, setUserInput] = useState('');
   const [isProcessingAction, setIsProcessingAction] = useState(false);
   const [interactions, setInteractions] = useState([]);
+  const [viewingEvidence, setViewingEvidence] = useState(null); // <-- NEW STATE FOR MODAL
   const logContainerRef = useRef(null);
 
   const fetchCaseData = useCallback(async (id) => {
@@ -60,12 +62,19 @@ function Chat() {
     if (activeCaseId) {
       fetchCaseData(activeCaseId);
       setInteractions([]);
+    } else {
+      setCaseData(null); // Clear data if no case is active
     }
   }, [activeCaseId, fetchCaseData]);
 
   useEffect(() => {
-    if (logContainerRef.current) {
-      logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
+    // This effect is for the interaction log, not the main summary scroll
+    const logEl = logContainerRef.current;
+    if (logEl) {
+      // A slight delay can help ensure the DOM has updated before we scroll
+      setTimeout(() => {
+        logEl.scrollTop = logEl.scrollHeight;
+      }, 100);
     }
   }, [interactions]);
 
@@ -125,14 +134,12 @@ function Chat() {
 
   const renderWorkspaceView = () => (
     <>
-      {/* This wrapper allows the summary to scroll independently */}
       <div className="tac-summary-wrapper">
         {isSummaryLoading && <div className="tac-summary-widget loading">Loading Summary for Case {activeCaseId}...</div>}
         {summaryError && !isSummaryLoading && <div className="tac-summary-widget error">{summaryError}</div>}
-        {caseData && <TacSummary caseData={caseData} />}
+        {caseData && <TacSummary caseData={caseData} onEvidenceClick={setViewingEvidence} />}
       </div>
 
-      {/* The interaction log is now a sibling, not a child, of the summary */}
       <div className="interaction-log-container" ref={logContainerRef}>
         {interactions.map((msg, index) => (
           <div key={index} className={`interaction-message-wrapper ${msg.sender}`}>
@@ -163,6 +170,15 @@ function Chat() {
   return (
     <div className="workspace-container">
       {showNewCaseModal && <NewCaseModal onCaseCreated={handleCaseCreated} onClose={() => setShowNewCaseModal(false)} />}
+
+      {viewingEvidence && (
+        <EvidenceModal
+          caseId={activeCaseId}
+          evidenceType={viewingEvidence}
+          onClose={() => setViewingEvidence(null)}
+        />
+      )}
+
       {activeCaseId ? renderWorkspaceView() : renderNoActiveCaseView()}
     </div>
   );
