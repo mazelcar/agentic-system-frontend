@@ -1,6 +1,5 @@
 // src/context/CaseContext.js
-import React from 'react';
-import { createContext, useState, useContext } from 'react';
+import React, { createContext, useState, useContext } from 'react'; // Corrected import
 
 // Create the context
 const CaseContext = createContext();
