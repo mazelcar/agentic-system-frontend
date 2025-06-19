@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { useCaseContext } from './context/CaseContext'; // Import our context hook
+import { useCaseContext } from './CaseContext'; // Removed './context/'
 import TacSummary from './TacSummary'; // Import our new widget
 import SourceDocuments from './SourceDocuments';
 

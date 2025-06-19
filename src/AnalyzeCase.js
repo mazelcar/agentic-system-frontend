@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom'; // To navigate programmatically
-import { useCaseContext } from './context/CaseContext'; // Import our new context hook
+import { useCaseContext } from './CaseContext'; // Removed './context/'
 
 const API_URL = process.env.REACT_APP_API_URL;
 
