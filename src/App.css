@@ -401,3 +401,50 @@ body {
   margin-right: auto;
   word-wrap: break-word;
 }
+
+tac-summary-widget {
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 20px;
+  margin: 20px;
+  font-size: 15px;
+}
+
+.tac-summary-widget.loading {
+  text-align: center;
+  color: #6c757d;
+}
+
+.tac-summary-widget h3 {
+  margin-top: 0;
+  color: #0056b3;
+  border-bottom: 2px solid #007bff;
+  padding-bottom: 10px;
+  margin-bottom: 20px;
+}
+
+.summary-section {
+  margin-bottom: 20px;
+}
+
+.summary-section h4 {
+  margin-bottom: 8px;
+  color: #343a40;
+  font-size: 16px;
+}
+
+.summary-section p, .summary-section li {
+  margin: 4px 0;
+  line-height: 1.6;
+  color: #495057;
+}
+
+.summary-section p strong {
+  color: #212529;
+}
+
+.summary-section ul {
+  padding-left: 20px;
+  margin-top: 5px;
+}
