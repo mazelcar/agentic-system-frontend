@@ -1,30 +1,31 @@
 // src/Chat.js
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
 import { useCaseContext } from './context/CaseContext';
 import TacSummary from './TacSummary';
 import NewCaseModal from './NewCaseModal';
+import SourceDocuments from './SourceDocuments'; // <-- IMPORT THE EXISTING COMPONENT
 
 const API_URL = process.env.REACT_APP_API_URL;
 
 function Chat() {
-  // Global state for the active case
+  // Global state
   const { activeCaseId, setActiveCaseId } = useCaseContext();
 
-  // State for this component
+  // Component State
   const [caseData, setCaseData] = useState(null);
   const [isSummaryLoading, setIsSummaryLoading] = useState(false);
   const [summaryError, setSummaryError] = useState(null);
-
   const [recentCases, setRecentCases] = useState([]);
   const [isCaseListLoading, setIsCaseListLoading] = useState(true);
-
   const [showNewCaseModal, setShowNewCaseModal] = useState(false);
 
-  // --- NEW STATE FOR THE ACTION PANEL ---
+  // --- NEW STATE FOR INTERACTIVE WORKSPACE ---
   const [userInput, setUserInput] = useState('');
-  const [isUpdating, setIsUpdating] = useState(false);
+  const [isProcessingAction, setIsProcessingAction] = useState(false);
+  const [interactions, setInteractions] = useState([]); // To store the conversation
+  const logContainerRef = useRef(null);
 
   // --- Reusable function to fetch case data ---
   const fetchCaseData = useCallback(async (id) => {
@@ -43,27 +44,32 @@ function Chat() {
     } finally {
       setIsSummaryLoading(false);
     }
-  }, []); // useCallback with empty dependency array as it has no external dependencies
+  }, []);
 
-  // --- This effect fetches the list of recent cases on initial load ---
+  // Effect to fetch recent cases on mount
   useEffect(() => {
     const fetchRecentCases = async () => {
       try {
         const response = await axios.get(`${API_URL}/cases`);
         setRecentCases(response.data);
-      } catch (error) {
-        console.error("Failed to fetch recent cases:", error);
-      } finally {
-        setIsCaseListLoading(false);
-      }
+      } catch (error) { console.error("Failed to fetch recent cases:", error); }
+      finally { setIsCaseListLoading(false); }
     };
     fetchRecentCases();
-  }, []); // Empty dependency array means this runs only once on mount
+  }, []);
 
-  // --- This effect fetches the data for the ACTIVE case ---
+  // Effect to fetch data when active case changes
   useEffect(() => {
     fetchCaseData(activeCaseId);
-  }, [activeCaseId, fetchCaseData]); // Re-runs whenever activeCaseId or the fetch function changes
+    setInteractions([]); // Clear interaction log when changing cases
+  }, [activeCaseId, fetchCaseData]);
+
+  // Effect to scroll the interaction log
+  useEffect(() => {
+    if (logContainerRef.current) {
+      logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
+    }
+  }, [interactions]);
 
   const handleCaseCreated = (newCaseId) => {
     setActiveCaseId(newCaseId);
@@ -71,29 +77,37 @@ function Chat() {
     setShowNewCaseModal(false);
   };
 
-  // --- NEW: Function to handle submitting updates from the Action Panel ---
-  const handleUpdateCase = async (e) => {
+  // --- NEW: Unified function to handle all actions from the input bar ---
+  const handleActionSubmit = async (e) => {
     e.preventDefault();
     if (!userInput.trim() || !activeCaseId) return;
 
-    setIsUpdating(true);
+    const currentInput = userInput;
+    setInteractions(prev => [...prev, { sender: 'user', text: currentInput }]);
+    setUserInput('');
+    setIsProcessingAction(true);
+
     try {
-      // Call the backend agent to update the case
-      await axios.post(`${API_URL}/cases/${activeCaseId}/update`, {
-        user_input: userInput,
+      // Using the new unified '/action' endpoint
+      const response = await axios.post(`${API_URL}/cases/${activeCaseId}/action`, {
+        user_input: currentInput,
       });
 
-      // Clear the input field on success
-      setUserInput('');
+      const { type, content, sources } = response.data;
 
-      // Re-fetch the case data to refresh the TacSummary widget
-      await fetchCaseData(activeCaseId);
-
+      if (type === 'answer') {
+        setInteractions(prev => [...prev, { sender: 'agent', text: content, sources: sources || [] }]);
+      } else if (type === 'update') {
+        // The update was successful, refresh the summary to show the change
+        await fetchCaseData(activeCaseId);
+        setInteractions(prev => [...prev, { sender: 'agent', text: "OK, I've updated the case summary.", sources: [] }]);
+      }
     } catch (error) {
-      console.error("Failed to update case:", error);
-      setSummaryError(`Failed to apply update: ${error.response?.data?.detail || error.message}`);
+      console.error("Failed to process action:", error);
+      const errorMsg = `Error: ${error.response?.data?.detail || error.message}`;
+      setInteractions(prev => [...prev, { sender: 'agent', text: errorMsg, sources: [] }]);
     } finally {
-      setIsUpdating(false);
+      setIsProcessingAction(false);
     }
   };
 
@@ -103,21 +117,12 @@ function Chat() {
       <h2>Welcome to the Workspace</h2>
       <p>Please select a case to begin or create a new one.</p>
       <div className="case-selection-actions">
-        <button onClick={() => setShowNewCaseModal(true)} className="btn-primary">
-          New Case
-        </button>
+        <button onClick={() => setShowNewCaseModal(true)} className="btn-primary">New Case</button>
         <div className="recent-cases-container">
           <label htmlFor="recent-cases">Open Recent Case:</label>
-          <select
-            id="recent-cases"
-            onChange={(e) => setActiveCaseId(e.target.value)}
-            value={activeCaseId || ""}
-            disabled={isCaseListLoading}
-          >
+          <select id="recent-cases" onChange={(e) => setActiveCaseId(e.target.value)} value={activeCaseId || ""} disabled={isCaseListLoading}>
             <option value="" disabled>{isCaseListLoading ? "Loading..." : "Select a case"}</option>
-            {recentCases.map(caseId => (
-              <option key={caseId} value={caseId}>{caseId}</option>
-            ))}
+            {recentCases.map(caseId => (<option key={caseId} value={caseId}>{caseId}</option>))}
           </select>
         </div>
       </div>
@@ -131,17 +136,31 @@ function Chat() {
       {summaryError && !isSummaryLoading && <div className="tac-summary-widget error">{summaryError}</div>}
       {caseData && <TacSummary caseData={caseData} />}
 
-      {/* --- UPDATED: The Action Panel is now a functional form --- */}
-      <form className="chat-input" onSubmit={handleUpdateCase}>
+      {/* --- NEW: The Interaction Log --- */}
+      <div className="interaction-log-container" ref={logContainerRef}>
+        <div> {/* This inner div is for the flex-direction: column-reverse trick */}
+          {interactions.map((msg, index) => (
+            <div key={index} className={`interaction-message ${msg.sender}`}>
+              <strong>{msg.sender === 'user' ? 'You' : 'Agent'}</strong>
+              {msg.text}
+              {/* --- Render sources if they exist using the existing component --- */}
+              {msg.sources && msg.sources.length > 0 && <SourceDocuments sources={msg.sources} />}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* --- UPDATED: The Action Panel form --- */}
+      <form className="chat-input" onSubmit={handleActionSubmit}>
         <input
           type="text"
-          placeholder="Enter case notes or actions... (e.g., 'The affected device is MEMPHIS-1')"
+          placeholder={isProcessingAction ? "Agent is thinking..." : "Provide data or ask a question..."}
           value={userInput}
           onChange={(e) => setUserInput(e.target.value)}
-          disabled={isUpdating || isSummaryLoading}
+          disabled={isProcessingAction || isSummaryLoading}
         />
-        <button type="submit" disabled={isUpdating || isSummaryLoading || !userInput.trim()}>
-          {isUpdating ? 'Updating...' : 'Update Case'}
+        <button type="submit" disabled={isProcessingAction || isSummaryLoading || !userInput.trim()}>
+          {isProcessingAction ? '...' : 'Submit'}
         </button>
       </form>
     </>
@@ -149,13 +168,7 @@ function Chat() {
 
   return (
     <div className="workspace-container">
-      {showNewCaseModal && (
-        <NewCaseModal
-          onCaseCreated={handleCaseCreated}
-          onClose={() => setShowNewCaseModal(false)}
-        />
-      )}
-
+      {showNewCaseModal && <NewCaseModal onCaseCreated={handleCaseCreated} onClose={() => setShowNewCaseModal(false)} />}
       {activeCaseId ? renderWorkspaceView() : renderNoActiveCaseView()}
     </div>
   );

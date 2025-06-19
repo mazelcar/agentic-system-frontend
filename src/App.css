@@ -563,3 +563,46 @@ body {
   cursor: pointer;
   font-size: 1rem;
 }
+
+/* --- Styles for Interaction Log --- */
+.interaction-log-container {
+  padding: 0 20px 10px 20px; /* Add some padding */
+  margin-top: auto; /* Pushes the log to the bottom of the flex container */
+  max-height: 250px; /* Limit height and make it scrollable */
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column-reverse; /* Newest messages at the bottom */
+  border-top: 1px solid #eee;
+}
+
+.interaction-message {
+  padding: 10px 15px;
+  border-radius: 18px;
+  line-height: 1.4;
+  word-wrap: break-word;
+  margin-top: 12px;
+  max-width: 80%;
+}
+
+.interaction-message.user {
+  background-color: #007bff;
+  color: white;
+  border-bottom-right-radius: 4px;
+  align-self: flex-end;
+}
+
+.interaction-message.agent {
+  background-color: #e9e9eb;
+  color: #333;
+  border-bottom-left-radius: 4px;
+  align-self: flex-start;
+  white-space: pre-wrap; /* Preserve line breaks from the agent's response */
+}
+
+.interaction-message strong {
+  font-weight: bold;
+  display: block;
+  margin-bottom: 4px;
+  font-size: 12px;
+  opacity: 0.8;
+}
