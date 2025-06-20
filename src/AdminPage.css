@@ -1,0 +1,42 @@
+/* src/AdminPage.css */
+
+.admin-page-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: #f8f9fa;
+}
+
+.admin-header {
+  background-color: #343a40;
+  color: white;
+  padding: 20px 30px;
+  border-bottom: 4px solid #007bff;
+}
+
+.admin-header h2 {
+  margin: 0;
+  font-size: 1.8rem;
+}
+
+.admin-header p {
+  margin: 5px 0 0;
+  opacity: 0.8;
+}
+
+.admin-content {
+  padding: 20px;
+  overflow-y: auto;
+  flex-grow: 1;
+}
+
+/* We can reuse some of the upload styles, but let's scope them
+   to be inside the admin page for better separation */
+.admin-content .upload-container {
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  padding: 30px;
+  max-width: 700px;
+  margin: 0 auto;
+}

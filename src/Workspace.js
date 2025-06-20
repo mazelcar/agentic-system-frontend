@@ -1,4 +1,4 @@
-// src/Chat.js
+// src/Workspace.js
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
@@ -6,11 +6,11 @@ import { useCaseContext } from './context/CaseContext';
 import TacSummary from './TacSummary';
 import NewCaseModal from './NewCaseModal';
 import SourceDocuments from './SourceDocuments';
-import EvidenceModal from './EvidenceModal'; // <-- IMPORT THE NEW COMPONENT
+import EvidenceModal from './EvidenceModal';
 
 const API_URL = process.env.REACT_APP_API_URL;
 
-function Chat() {
+function Workspace() {
   // Global state
   const { activeCaseId, setActiveCaseId } = useCaseContext();
 
@@ -26,7 +26,7 @@ function Chat() {
   const [userInput, setUserInput] = useState('');
   const [isProcessingAction, setIsProcessingAction] = useState(false);
   const [interactions, setInteractions] = useState([]);
-  const [viewingEvidence, setViewingEvidence] = useState(null); // <-- NEW STATE FOR MODAL
+  const [viewingEvidence, setViewingEvidence] = useState(null);
   const logContainerRef = useRef(null);
 
   const fetchCaseData = useCallback(async (id) => {
@@ -68,10 +68,8 @@ function Chat() {
   }, [activeCaseId, fetchCaseData]);
 
   useEffect(() => {
-    // This effect is for the interaction log, not the main summary scroll
     const logEl = logContainerRef.current;
     if (logEl) {
-      // A slight delay can help ensure the DOM has updated before we scroll
       setTimeout(() => {
         logEl.scrollTop = logEl.scrollHeight;
       }, 100);
@@ -115,6 +113,7 @@ function Chat() {
     }
   };
 
+  // This is the "Lobby" view, shown when no case is active
   const renderNoActiveCaseView = () => (
     <div className="no-case-view">
       <h2>Welcome to the Workspace</h2>
@@ -132,6 +131,7 @@ function Chat() {
     </div>
   );
 
+  // This is the "Active Case" view
   const renderWorkspaceView = () => (
     <>
       <div className="tac-summary-wrapper">
@@ -184,4 +184,4 @@ function Chat() {
   );
 }
 
-export default Chat;
+export default Workspace;

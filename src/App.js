@@ -3,39 +3,47 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, NavLink } from 'react-router-dom';
 import './App.css';
-import Chat from './Chat';
-import Upload from './Upload';
-import AnalyzeCase from './AnalyzeCase';
-import { CaseProvider } from './context/CaseContext';
+import './AdminPage.css'; // Import new CSS
+import Workspace from './Workspace'; // Import new Workspace component
+import AdminPage from './AdminPage'; // Import new AdminPage component
+import { CaseProvider, useCaseContext } from './context/CaseContext';
+
+// A new component for the header to access context
+function AppHeader() {
+  const { activeCaseId } = useCaseContext();
+
+  return (
+    <div className="header">
+      <div className="header-content">
+        <NavLink to="/" className="nav-link-title">
+          <h1>
+            {activeCaseId ? `Case: ${activeCaseId}` : 'Network Engineer Agent'}
+          </h1>
+        </NavLink>
+        <nav className="navigation">
+          <NavLink to="/" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
+            Workspace
+          </NavLink>
+          <NavLink to="/admin" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
+            Admin
+          </NavLink>
+        </nav>
+      </div>
+    </div>
+  );
+}
+
 
 function App() {
   return (
-    // Wrap the entire application in the CaseProvider
     <CaseProvider>
       <Router>
         <div className="App">
-          <div className="header">
-            <div className="header-content">
-              <h1>Network Engineer Agent</h1>
-              <nav className="navigation">
-                <NavLink to="/" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
-                  Chat
-                </NavLink>
-                <NavLink to="/upload" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
-                  Upload KB
-                </NavLink>
-                <NavLink to="/analyze" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
-                  Analyze Case
-                </NavLink>
-              </nav>
-            </div>
-          </div>
-
+          <AppHeader />
           <div className="content-area">
             <Routes>
-              <Route path="/" element={<Chat />} />
-              <Route path="/upload" element={<Upload />} />
-              <Route path="/analyze" element={<AnalyzeCase />} />
+              <Route path="/" element={<Workspace />} />
+              <Route path="/admin" element={<AdminPage />} />
             </Routes>
           </div>
         </div>

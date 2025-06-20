@@ -1,0 +1,16 @@
+Initial commands, 
+
+source venv/bin/activate
+
+
+
+start the Celery worker
+celery -A celery_worker.celery_app worker --loglevel=info
+
+
+Run the Uvicorn server with the --reload flag
+uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+
+git config --global user.name "Manuel"
+git config --global user.email "mazelcar2018@gmail.com"

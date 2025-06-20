@@ -1,8 +1,9 @@
 --- Project Context: frontend ---
-Generated on: 2025-06-19 16:52:08
+Generated on: 2025-06-20 06:27:09
 
 --- Directory Structure ---
 ├── .gitignore
+├── Initial commands,.txt
 ├── package.json
 ├── README.md
 ├── public/
@@ -15,6 +16,7 @@ Generated on: 2025-06-19 16:52:08
     ├── App.js
     ├── App.test.js
     ├── Chat.js
+    ├── EvidenceModal.js
     ├── index.css
     ├── index.js
     ├── NewCaseModal.js
@@ -524,6 +526,60 @@ body {
 .btn-primary { background-color: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 1rem; }
 .btn-primary:disabled { background-color: #a0c7ff; }
 .btn-secondary { background-color: #6c757d; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 1rem; }
+
+/* --- Styles for Evidence Drill-Down --- */
+.summary-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.summary-section-header h4 {
+  margin: 0; /* Remove default margin from h4 */
+}
+
+.view-evidence-btn {
+  background-color: #e9ecef;
+  border: 1px solid #dee2e6;
+  color: #495057;
+  padding: 4px 10px;
+  font-size: 12px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.view-evidence-btn:hover {
+  background-color: #ced4da;
+  border-color: #adb5bd;
+}
+
+/* --- Styles for Evidence Modal --- */
+.modal-content.evidence-modal {
+  max-width: 90%;
+  width: 800px;
+  height: 80%;
+  display: flex;
+  flex-direction: column;
+}
+
+.evidence-content {
+  flex-grow: 1;
+  overflow-y: auto;
+  background-color: #2b2b2b;
+  color: #f8f8f2;
+  font-family: 'Courier New', Courier, monospace;
+  padding: 15px;
+  border-radius: 4px;
+  border: 1px solid #444;
+}
+
+.evidence-content pre {
+  margin: 0;
+  white-space: pre-wrap; /* Wrap long lines */
+  word-wrap: break-word;
+}
 ```
 
 ### src/App.js ###
@@ -600,6 +656,7 @@ import { useCaseContext } from './context/CaseContext';
 import TacSummary from './TacSummary';
 import NewCaseModal from './NewCaseModal';
 import SourceDocuments from './SourceDocuments';
+import EvidenceModal from './EvidenceModal'; // <-- IMPORT THE NEW COMPONENT
 
 const API_URL = process.env.REACT_APP_API_URL;
 
@@ -619,6 +676,7 @@ function Chat() {
   const [userInput, setUserInput] = useState('');
   const [isProcessingAction, setIsProcessingAction] = useState(false);
   const [interactions, setInteractions] = useState([]);
+  const [viewingEvidence, setViewingEvidence] = useState(null); // <-- NEW STATE FOR MODAL
   const logContainerRef = useRef(null);
 
   const fetchCaseData = useCallback(async (id) => {
@@ -654,12 +712,19 @@ function Chat() {
     if (activeCaseId) {
       fetchCaseData(activeCaseId);
       setInteractions([]);
+    } else {
+      setCaseData(null); // Clear data if no case is active
     }
   }, [activeCaseId, fetchCaseData]);
 
   useEffect(() => {
-    if (logContainerRef.current) {
-      logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
+    // This effect is for the interaction log, not the main summary scroll
+    const logEl = logContainerRef.current;
+    if (logEl) {
+      // A slight delay can help ensure the DOM has updated before we scroll
+      setTimeout(() => {
+        logEl.scrollTop = logEl.scrollHeight;
+      }, 100);
     }
   }, [interactions]);
 
@@ -719,14 +784,12 @@ function Chat() {
 
   const renderWorkspaceView = () => (
     <>
-      {/* This wrapper allows the summary to scroll independently */}
       <div className="tac-summary-wrapper">
         {isSummaryLoading && <div className="tac-summary-widget loading">Loading Summary for Case {activeCaseId}...</div>}
         {summaryError && !isSummaryLoading && <div className="tac-summary-widget error">{summaryError}</div>}
-        {caseData && <TacSummary caseData={caseData} />}
+        {caseData && <TacSummary caseData={caseData} onEvidenceClick={setViewingEvidence} />}
       </div>
 
-      {/* The interaction log is now a sibling, not a child, of the summary */}
       <div className="interaction-log-container" ref={logContainerRef}>
         {interactions.map((msg, index) => (
           <div key={index} className={`interaction-message-wrapper ${msg.sender}`}>
@@ -757,12 +820,67 @@ function Chat() {
   return (
     <div className="workspace-container">
       {showNewCaseModal && <NewCaseModal onCaseCreated={handleCaseCreated} onClose={() => setShowNewCaseModal(false)} />}
+
+      {viewingEvidence && (
+        <EvidenceModal
+          caseId={activeCaseId}
+          evidenceType={viewingEvidence}
+          onClose={() => setViewingEvidence(null)}
+        />
+      )}
+
       {activeCaseId ? renderWorkspaceView() : renderNoActiveCaseView()}
     </div>
   );
 }
 
 export default Chat;
+```
+
+### src/EvidenceModal.js ###
+```
+// src/EvidenceModal.js
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+
+const API_URL = process.env.REACT_APP_API_URL;
+
+function EvidenceModal({ caseId, evidenceType, onClose }) {
+  const [content, setContent] = useState('Loading evidence...');
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (caseId && evidenceType) {
+      const fetchEvidence = async () => {
+        try {
+          const response = await axios.get(`${API_URL}/case/${caseId}/evidence/${evidenceType}`);
+          setContent(response.data || 'Evidence file is empty.');
+        } catch (err) {
+          setError(err.response?.data?.detail || 'Failed to load evidence.');
+          setContent('');
+        }
+      };
+      fetchEvidence();
+    }
+  }, [caseId, evidenceType]);
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal-content evidence-modal" onClick={(e) => e.stopPropagation()}>
+        <h2>Evidence: {evidenceType}</h2>
+        <div className="evidence-content">
+          {error && <p className="modal-error">{error}</p>}
+          <pre>{content}</pre>
+        </div>
+        <div className="modal-actions">
+          <button onClick={onClose} className="btn-secondary">Close</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default EvidenceModal;
 ```
 
 ### src/index.css ###
@@ -940,54 +1058,75 @@ export default SourceDocuments;
 import React from 'react';
 
 // A small helper component to keep our JSX clean
-const SummarySection = ({ title, children }) => (
+const SummarySection = ({ title, evidenceType, availableEvidence, onEvidenceClick, children }) => (
   <div className="summary-section">
-    <h4>{title}</h4>
+    <div className="summary-section-header">
+      <h4>{title}</h4>
+      {availableEvidence?.includes(evidenceType) && (
+        <button className="view-evidence-btn" onClick={() => onEvidenceClick(evidenceType)}>
+          View Evidence
+        </button>
+      )}
+    </div>
     {children}
   </div>
 );
 
-function TacSummary({ caseData }) {
-  // Show a loading state if data hasn't arrived yet
+function TacSummary({ caseData, onEvidenceClick }) {
   if (!caseData) {
     return <div className="tac-summary-widget loading">Loading case data...</div>;
   }
 
-  const { network_info, reported_issue, tac_notes, recommendations, next_steps } = caseData;
+  const { network_info, reported_issue, tac_notes, recommendations, next_steps, available_evidence } = caseData;
+
+  // A helper to render the main sections, reducing repetition
+  const renderMainSection = (title, evidenceType, content) => (
+    <SummarySection
+      title={title}
+      evidenceType={evidenceType}
+      availableEvidence={available_evidence}
+      onEvidenceClick={onEvidenceClick}
+    >
+      <p>{content || 'N/A'}</p>
+    </SummarySection>
+  );
 
   return (
     <div className="tac-summary-widget">
       <h3>TAC Summary for Case: {caseData.case_id}</h3>
 
-      <SummarySection title="Network Info">
+      <SummarySection
+        title="Network Info"
+        evidenceType="version"
+        availableEvidence={available_evidence}
+        onEvidenceClick={onEvidenceClick}
+      >
         <p><strong>Platform:</strong> {network_info?.access_platform || 'N/A'}</p>
         <p><strong>SW Version:</strong> {network_info?.software_version || 'N/A'}</p>
         <p><strong>Affected Device:</strong> {network_info?.affected_device || 'N/A'}</p>
         <p><strong>Affected Interface:</strong> {network_info?.affected_interface || 'N/A'}</p>
       </SummarySection>
 
-      <SummarySection title="Reported Issue">
-        <p>{reported_issue || 'N/A'}</p>
-      </SummarySection>
+      {renderMainSection("Reported Issue", null, reported_issue)}
 
-      <SummarySection title="TAC Notes">
-        <p><strong>ERPS Analysis:</strong> {tac_notes?.erps_analysis || 'N/A'}</p>
-        <p><strong>Interface Analysis:</strong> {tac_notes?.interface_analysis || 'N/A'}</p>
-        <p><strong>Alarm Analysis:</strong> {tac_notes?.alarm_analysis || 'N/A'}</p>
-        <p><strong>Correlation:</strong> {tac_notes?.correlation || 'N/A'}</p>
-      </SummarySection>
+      <div className="summary-section">
+        <h4>TAC Notes</h4>
+        {renderMainSection("ERPS Analysis", "timeouts", tac_notes?.erps_analysis)}
+        {renderMainSection("Interface Analysis", "interfaces", tac_notes?.interface_analysis)}
+        {renderMainSection("Alarm Analysis", "alarms", tac_notes?.alarm_analysis)}
+        {renderMainSection("Correlation", "errors", tac_notes?.correlation)}
+      </div>
 
       <SummarySection title="Recommendations">
         <ul>
-          {recommendations?.map((rec, index) => (
-            <li key={index}>{rec}</li>
-          )) || <li>N/A</li>}
+          {recommendations?.length > 0
+            ? recommendations.map((rec, index) => <li key={index}>{rec}</li>)
+            : <li>N/A</li>
+          }
         </ul>
       </SummarySection>
 
-      <SummarySection title="Next Steps">
-        <p>{next_steps || 'N/A'}</p>
-      </SummarySection>
+      {renderMainSection("Next Steps", null, next_steps)}
     </div>
   );
 }
@@ -1129,6 +1268,6 @@ export const CaseProvider = ({ children }) => {
 ```
 
 --- Statistics ---
-Total Files Scanned (excluding noise): 18
-Files with Full Content Included: 14
-Files Listed in Structure Only: 4
+Total Files Scanned (excluding noise): 20
+Files with Full Content Included: 15
+Files Listed in Structure Only: 5

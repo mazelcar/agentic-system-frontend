@@ -37,6 +37,17 @@ body {
   width: 100%;
 }
 
+/* NEW STYLE FOR THE TITLE LINK */
+.nav-link-title {
+  color: white;
+  text-decoration: none;
+}
+.nav-link-title h1 {
+  margin: 0;
+  font-size: 1.5rem; /* Make title a bit bigger */
+}
+
+
 .navigation {
   display: flex;
   gap: 10px;
