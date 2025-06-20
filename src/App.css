@@ -271,6 +271,14 @@ body {
 }
 .interaction-message.user { background-color: #007bff; color: white; border-bottom-right-radius: 4px; }
 .interaction-message.agent { background-color: #e9e9eb; color: #333; border-bottom-left-radius: 4px; white-space: pre-wrap; }
+
+/* --- NEW STYLE FOR PLAN MESSAGES --- */
+.interaction-message.plan {
+  background-color: transparent; /* The PlanDisplay has its own background */
+  padding: 0; /* The PlanDisplay has its own padding */
+  max-width: 100%; /* Allow the plan to take full width */
+}
+
 .interaction-message strong { font-weight: bold; display: block; margin-bottom: 4px; font-size: 12px; opacity: 0.8; }
 
 /* --- Original Modal Styles --- */

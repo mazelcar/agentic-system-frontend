@@ -3,9 +3,10 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, NavLink } from 'react-router-dom';
 import './App.css';
-import './AdminPage.css'; // Import new CSS
-import Workspace from './Workspace'; // Import new Workspace component
-import AdminPage from './AdminPage'; // Import new AdminPage component
+import './AdminPage.css';
+import './PlanDisplay.css'; // <-- ADD THIS LINE
+import Workspace from './Workspace';
+import AdminPage from './AdminPage';
 import { CaseProvider, useCaseContext } from './context/CaseContext';
 
 // A new component for the header to access context

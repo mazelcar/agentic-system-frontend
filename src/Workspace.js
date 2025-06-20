@@ -5,10 +5,11 @@ import axios from 'axios';
 import { useCaseContext } from './context/CaseContext';
 import TacSummary from './TacSummary';
 import NewCaseModal from './NewCaseModal';
-import SourceDocuments from './SourceDocuments';
 import EvidenceModal from './EvidenceModal';
+import PlanDisplay from './PlanDisplay';
 
 const API_URL = process.env.REACT_APP_API_URL;
+const POLLING_INTERVAL = 3000; // Poll every 3 seconds
 
 function Workspace() {
   // Global state
@@ -26,9 +27,12 @@ function Workspace() {
   const [userInput, setUserInput] = useState('');
   const [isProcessingAction, setIsProcessingAction] = useState(false);
   const [interactions, setInteractions] = useState([]);
+  const [activePlanId, setActivePlanId] = useState(null);
   const [viewingEvidence, setViewingEvidence] = useState(null);
   const logContainerRef = useRef(null);
+  const pollingIntervalRef = useRef(null);
 
+  // --- Data Fetching Callbacks ---
   const fetchCaseData = useCallback(async (id) => {
     if (!id) {
       setCaseData(null);
@@ -47,34 +51,74 @@ function Workspace() {
     }
   }, []);
 
-  useEffect(() => {
-    const fetchRecentCases = async () => {
-      try {
-        const response = await axios.get(`${API_URL}/cases`);
-        setRecentCases(response.data);
-      } catch (error) { console.error("Failed to fetch recent cases:", error); }
-      finally { setIsCaseListLoading(false); }
-    };
-    fetchRecentCases();
+  const fetchRecentCases = useCallback(async () => {
+    try {
+      const response = await axios.get(`${API_URL}/cases`);
+      setRecentCases(response.data);
+    } catch (error) {
+      console.error("Failed to fetch recent cases:", error);
+    } finally {
+      setIsCaseListLoading(false);
+    }
   }, []);
+
+
+  // --- Effects ---
+  useEffect(() => {
+    fetchRecentCases();
+  }, [fetchRecentCases]);
 
   useEffect(() => {
     if (activeCaseId) {
       fetchCaseData(activeCaseId);
       setInteractions([]);
+      setActivePlanId(null);
     } else {
-      setCaseData(null); // Clear data if no case is active
+      setCaseData(null);
     }
   }, [activeCaseId, fetchCaseData]);
 
   useEffect(() => {
-    const logEl = logContainerRef.current;
-    if (logEl) {
-      setTimeout(() => {
-        logEl.scrollTop = logEl.scrollHeight;
-      }, 100);
+    if (logContainerRef.current) {
+      logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
     }
   }, [interactions]);
+
+  const pollPlanStatus = useCallback(async () => {
+    if (!activePlanId) return;
+    try {
+      const response = await axios.get(`${API_URL}/plan/status/${activePlanId}`);
+      const updatedPlan = response.data;
+      setInteractions(prev =>
+        prev.map(interaction =>
+          interaction.type === 'plan' && interaction.plan.plan_id === activePlanId
+            ? { ...interaction, plan: updatedPlan }
+            : interaction
+        )
+      );
+      if (updatedPlan.overall_status === 'completed' || updatedPlan.overall_status === 'failed') {
+        setActivePlanId(null);
+        setIsProcessingAction(false);
+        if (JSON.stringify(updatedPlan).includes("case_updater_v1")) {
+            fetchCaseData(activeCaseId);
+        }
+      }
+    } catch (error) {
+      console.error("Polling failed:", error);
+      setInteractions(prev => [...prev, { type: 'agent', text: `Error checking plan status: ${error.message}` }]);
+      setActivePlanId(null);
+      setIsProcessingAction(false);
+    }
+  }, [activePlanId, activeCaseId, fetchCaseData]);
+
+  useEffect(() => {
+    if (activePlanId) {
+      pollingIntervalRef.current = setInterval(pollPlanStatus, POLLING_INTERVAL);
+    } else {
+      clearInterval(pollingIntervalRef.current);
+    }
+    return () => clearInterval(pollingIntervalRef.current);
+  }, [activePlanId, pollPlanStatus]);
 
   const handleCaseCreated = (newCaseId) => {
     setActiveCaseId(newCaseId);
@@ -85,35 +129,25 @@ function Workspace() {
   const handleActionSubmit = async (e) => {
     e.preventDefault();
     if (!userInput.trim() || !activeCaseId) return;
-
     const currentInput = userInput;
-    setInteractions(prev => [...prev, { sender: 'user', text: currentInput }]);
+    setInteractions(prev => [...prev, { type: 'user', text: currentInput }]);
     setUserInput('');
     setIsProcessingAction(true);
-
     try {
       const response = await axios.post(`${API_URL}/cases/${activeCaseId}/action`, {
         user_input: currentInput,
       });
-
-      const { type, content, sources } = response.data;
-
-      if (type === 'answer') {
-        setInteractions(prev => [...prev, { sender: 'agent', text: content, sources: sources || [] }]);
-      } else if (type === 'update') {
-        await fetchCaseData(activeCaseId);
-        setInteractions(prev => [...prev, { sender: 'agent', text: "OK, I've updated the case summary.", sources: [] }]);
-      }
+      const initialPlan = response.data;
+      setInteractions(prev => [...prev, { type: 'plan', plan: initialPlan }]);
+      setActivePlanId(initialPlan.plan_id);
     } catch (error) {
-      console.error("Failed to process action:", error);
+      console.error("Failed to start plan:", error);
       const errorMsg = `Error: ${error.response?.data?.detail || error.message}`;
-      setInteractions(prev => [...prev, { sender: 'agent', text: errorMsg, sources: [] }]);
-    } finally {
+      setInteractions(prev => [...prev, { type: 'agent', text: errorMsg }]);
       setIsProcessingAction(false);
     }
   };
 
-  // This is the "Lobby" view, shown when no case is active
   const renderNoActiveCaseView = () => (
     <div className="no-case-view">
       <h2>Welcome to the Workspace</h2>
@@ -131,7 +165,6 @@ function Workspace() {
     </div>
   );
 
-  // This is the "Active Case" view
   const renderWorkspaceView = () => (
     <>
       <div className="tac-summary-wrapper">
@@ -141,21 +174,31 @@ function Workspace() {
       </div>
 
       <div className="interaction-log-container" ref={logContainerRef}>
-        {interactions.map((msg, index) => (
-          <div key={index} className={`interaction-message-wrapper ${msg.sender}`}>
-            <div className={`interaction-message ${msg.sender}`}>
-              <strong>{msg.sender === 'user' ? 'You' : 'Agent'}</strong>
-              {msg.text}
-              {msg.sources && msg.sources.length > 0 && <SourceDocuments sources={msg.sources} />}
+        {interactions.map((msg, index) => {
+          // --- THIS IS THE REFINED RENDER LOGIC ---
+          if (msg.type === 'plan') {
+            return (
+              <div key={index} className="interaction-message-wrapper agent">
+                <PlanDisplay plan={msg.plan} />
+              </div>
+            );
+          }
+          return (
+            <div key={index} className={`interaction-message-wrapper ${msg.type}`}>
+              <div className={`interaction-message ${msg.type}`}>
+                <strong>{msg.type === 'user' ? 'You' : 'Agent'}</strong>
+                {msg.text}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+          // --- END OF REFINED RENDER LOGIC ---
+        })}
       </div>
 
       <form className="chat-input" onSubmit={handleActionSubmit}>
         <input
           type="text"
-          placeholder={isProcessingAction ? "Agent is thinking..." : "Provide data or ask a question..."}
+          placeholder={isProcessingAction ? "Agent is executing a plan..." : "What should I do next for this case?"}
           value={userInput}
           onChange={(e) => setUserInput(e.target.value)}
           disabled={isProcessingAction || isSummaryLoading}
@@ -170,15 +213,7 @@ function Workspace() {
   return (
     <div className="workspace-container">
       {showNewCaseModal && <NewCaseModal onCaseCreated={handleCaseCreated} onClose={() => setShowNewCaseModal(false)} />}
-
-      {viewingEvidence && (
-        <EvidenceModal
-          caseId={activeCaseId}
-          evidenceType={viewingEvidence}
-          onClose={() => setViewingEvidence(null)}
-        />
-      )}
-
+      {viewingEvidence && <EvidenceModal caseId={activeCaseId} evidenceType={viewingEvidence} onClose={() => setViewingEvidence(null)} />}
       {activeCaseId ? renderWorkspaceView() : renderNoActiveCaseView()}
     </div>
   );

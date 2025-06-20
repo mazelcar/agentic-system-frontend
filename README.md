@@ -1,70 +1,115 @@
-# Getting Started with Create React App
+--
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+# Network Engineer Agentic System - Backend
 
-## Available Scripts
+This project is the backend service for an AI-powered agentic system designed to assist Network Technical Assistance Center (TAC) engineers. It leverages Large Language Models (LLMs) via AWS Bedrock to automate log analysis, provide troubleshooting recommendations, and manage technical cases through a sophisticated Planner-Executor architecture.
 
-In the project directory, you can run:
+The system is built with FastAPI, Celery, and Redis, providing a robust, scalable, and asynchronous foundation for complex agentic workflows.
 
-### `npm start`
+## Core Features
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+-   **Case-Centric Design**: All operations are centered around a specific case, mirroring a real-world TAC workflow.
+-   **Planner-Executor Architecture**: Instead of simple Q&A, the agent creates multi-step execution plans to handle complex user requests, such as "Find the command to check for errors, then read the case summary."
+-   **Asynchronous Task Processing**: Heavy-lifting tasks like log analysis are offloaded to Celery workers, ensuring the API remains responsive.
+-   **Extensible Tool System**: New capabilities can be added by defining tools in simple JSON files and providing corresponding Python handler functions.
+-   **Vector-Based Knowledge Base**: Utilizes ChromaDB and Bedrock Embeddings to create a searchable knowledge base from documents like CLI manuals, enabling the agent to recommend specific commands.
+-   **Automated Log Analysis**: A Celery task can parse raw log files, extract key information using a command map, and generate a structured `tac_summary.json` report.
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## Project Structure
 
-### `npm test`
+```
+├── agents/                 # Contains the Planner and Executor agents
+├── cortex/                 # The "brain" orchestrating the agents and tools
+├── data/
+│   ├── tool_definitions/   # JSON definitions for each tool available to the agent
+│   └── structured_kb/      # Structured knowledge like the command map
+├── prompts/                # Prompt templates for the LLMs
+├── tools/                  # Python functions that implement the tool logic
+├── celery_worker.py        # The Celery worker for background tasks
+├── main.py                 # The main FastAPI application
+├── requirements.txt        # Python dependencies
+└── ...
+```
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+---
 
-### `npm run build`
+## Getting Started
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+### Prerequisites
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+1.  **Python 3.9+**: Ensure you have a modern version of Python installed.
+2.  **Redis**: A Redis server must be running. This is used as the message broker for Celery. You can run it locally via Docker:
+    ```bash
+    docker run -d -p 6379:6379 --name agentic-redis redis
+    ```
+3.  **AWS Credentials**: The application uses AWS Bedrock. You must have your AWS credentials configured. Create a `.env` file in the project root and add your credentials:
+    ```.env
+    AWS_REGION=us-east-1
+    AWS_ACCESS_KEY_ID=YOUR_AWS_ACCESS_KEY
+    AWS_SECRET_ACCESS_KEY=YOUR_AWS_SECRET_KEY
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+    # Celery Configuration (defaults to localhost Redis)
+    CELERY_BROKER_URL=redis://localhost:6379/0
+    CELERY_RESULT_BACKEND=redis://localhost:6379/0
+    ```
 
-### `npm run eject`
+### Installation
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+1.  **Clone the repository:**
+    ```bash
+    git clone <your-repo-url>
+    cd <your-repo-directory>
+    ```
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+2.  **Create a virtual environment and activate it:**
+    ```bash
+    python -m venv venv
+    source venv/bin/activate  # On Windows, use `venv\Scripts\activate`
+    ```
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+3.  **Install the required Python packages:**
+    ```bash
+    pip install -r requirements.txt
+    ```
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+---
 
-## Learn More
+## Running the System
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+To run the full system, you need to start **two separate processes** in two different terminals: the FastAPI web server and the Celery worker.
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+### 1. Run the FastAPI Web Server
 
-### Code Splitting
+This server handles all API requests from the frontend. The `--reload` flag will automatically restart the server whenever you make changes to the code.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+```bash
+uvicorn main:app --reload
+```
 
-### Analyzing the Bundle Size
+The API will be available at `http://127.0.0.1:8000`. You can access the auto-generated API documentation at `http://127.0.0.1:8000/docs`.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+### 2. Run the Celery Worker
 
-### Making a Progressive Web App
+This worker listens for and executes background tasks, such as the log file analysis. The `--loglevel=info` flag provides useful output for debugging.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+```bash
+celery -A celery_worker.celery_app worker --loglevel=info
+```
 
-### Advanced Configuration
+**Both of these processes must be running for the application to be fully functional.**
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+---
 
-### Deployment
+## Future Implementation Steps
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+This project has a solid foundation, but there are many exciting directions for future development:
 
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+-   **Initial Case Triage**: Enhance the `POST /cases` endpoint to automatically trigger an initial "triage" plan when a new case is created, populating the `next_steps` in the summary with intelligent questions based on the initial problem description.
+-   **Log Analysis as a Tool**: Refactor the `/analyze_case` endpoint into a `log_analyzer_v1` tool. This would allow the agent to decide *when* to analyze logs as part of a larger plan, rather than it being a purely user-driven action.
+-   **Tool Management UI**: Create a section in the `Admin` panel of the frontend to view, add, or edit tool definitions directly from the UI.
+-   **Knowledge Base Management**: Expand the `Admin` panel to show which documents have been ingested into the ChromaDB vector store and allow for re-indexing.
+-   **Human-in-the-Loop Execution**: For complex or potentially risky plans, introduce a "confirmation" step where the agent presents the plan to the user for approval before execution.
+-   **More Sophisticated Tools**:
+    *   A tool that can SSH into a device to run commands (requires careful security considerations).
+    *   A tool that can query a database of known bugs or release notes.
+    *   A tool that can generate and send formatted emails to escalate a case.

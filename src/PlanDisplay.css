@@ -1,0 +1,103 @@
+/* src/PlanDisplay.css */
+
+.plan-display-container {
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  background-color: #f9f9f9;
+  margin-top: 8px;
+  overflow: hidden;
+}
+
+.plan-header {
+  display: flex;
+  align-items: center;
+  padding: 10px 15px;
+  background-color: #e9ecef;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.plan-status-icon {
+  font-size: 1.5rem;
+  margin-right: 12px;
+}
+
+.plan-title-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.plan-title-group h4 {
+  margin: 0;
+  font-size: 1rem;
+  color: #343a40;
+}
+
+.plan-title-group span {
+  font-size: 0.8rem;
+  color: #6c757d;
+  text-transform: capitalize;
+}
+
+.plan-steps-list {
+  list-style-type: none;
+  margin: 0;
+  padding: 10px 15px;
+}
+
+.plan-step {
+  display: flex;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px dashed #e0e0e0;
+  transition: opacity 0.3s ease-in-out;
+}
+
+.plan-step:last-child {
+  border-bottom: none;
+}
+
+.step-status-icon {
+  font-size: 1.2rem;
+  margin-right: 10px;
+  flex-shrink: 0;
+}
+
+.step-details {
+  display: flex;
+  flex-direction: column;
+}
+
+.step-description {
+  color: #212529;
+  font-size: 0.9rem;
+}
+
+.step-error {
+  color: #dc3545;
+  font-size: 0.8rem;
+  margin-top: 4px;
+  font-style: italic;
+}
+
+/* Style steps based on status */
+.plan-step.pending {
+  opacity: 0.6;
+}
+
+.plan-step.executing {
+  opacity: 1;
+  font-weight: bold;
+}
+
+.plan-step.completed {
+  opacity: 1;
+}
+
+.plan-step.failed {
+  opacity: 1;
+  background-color: #f8d7da;
+  border-left: 4px solid #dc3545;
+  margin-left: -19px; /* Offset for the border */
+  padding-left: 15px;
+  border-radius: 4px;
+}
