@@ -5,11 +5,10 @@ import axios from 'axios';
 import { useCaseContext } from './context/CaseContext';
 import TacSummary from './TacSummary';
 import NewCaseModal from './NewCaseModal';
-import EvidenceModal from './EvidenceModal';
 import PlanDisplay from './PlanDisplay';
 
 const API_URL = process.env.REACT_APP_API_URL;
-const POLLING_INTERVAL = 3000; // Poll every 3 seconds
+const POLLING_INTERVAL = 3000;
 
 function Workspace() {
   // Global state
@@ -23,12 +22,15 @@ function Workspace() {
   const [isCaseListLoading, setIsCaseListLoading] = useState(true);
   const [showNewCaseModal, setShowNewCaseModal] = useState(false);
 
+  // NEW state for holding config data
+  const [contextOptions, setContextOptions] = useState(null);
+  const [problemCategories, setProblemCategories] = useState(null);
+
   // State for interactive workspace
-  const [userInput, setUserInput] = useState('');
+  const [userInput, setUserInput] =useState('');
   const [isProcessingAction, setIsProcessingAction] = useState(false);
   const [interactions, setInteractions] = useState([]);
   const [activePlanId, setActivePlanId] = useState(null);
-  const [viewingEvidence, setViewingEvidence] = useState(null);
   const logContainerRef = useRef(null);
   const pollingIntervalRef = useRef(null);
 
@@ -62,12 +64,34 @@ function Workspace() {
     }
   }, []);
 
-
-  // --- Effects ---
+  // NEW: Fetch all config data on initial load
   useEffect(() => {
+    const fetchConfigData = async () => {
+      try {
+        const [optionsRes, categoriesRes] = await Promise.all([
+          axios.get(`${API_URL}/api/v1/context-options`),
+          // We need to create this endpoint on the backend
+          // For now, we'll mock it.
+          Promise.resolve({ data: { categories: [
+            { id: 'ont_issue', displayName: 'ONT/GPON Issue', required_fields: ['platform', 'software_version', 'olt_card_type', 'ont_model'] },
+            { id: 'interface_issue', displayName: 'Interface/Port Issue', required_fields: ['platform', 'software_version', 'affected_interface'] },
+            { id: 'system_issue', displayName: 'Platform/System Issue', required_fields: ['platform', 'software_version'] },
+            { id: 'routing_issue', displayName: 'BGP/Routing Issue', required_fields: ['platform', 'software_version', 'router_id', 'neighbor_ip'] },
+          ]}})
+        ]);
+        setContextOptions(optionsRes.data);
+        setProblemCategories(categoriesRes.data.categories);
+      } catch (error) {
+        console.error("Failed to fetch configuration data:", error);
+        // Handle error appropriately, maybe show a global error message
+      }
+    };
+    fetchConfigData();
     fetchRecentCases();
   }, [fetchRecentCases]);
 
+
+  // --- Effects ---
   useEffect(() => {
     if (activeCaseId) {
       fetchCaseData(activeCaseId);
@@ -102,14 +126,19 @@ function Workspace() {
         setActivePlanId(null);
         setIsProcessingAction(false);
 
-        // THIS IS THE NEW LOGIC TO DISPLAY THE FINAL ANSWER
-        if (updatedPlan.overall_status === 'completed' && updatedPlan.final_answer) {
-            let answerText = updatedPlan.final_answer;
-            // Make the answer more readable if it's an object or array
-            if (typeof answerText !== 'string') {
-                answerText = JSON.stringify(answerText, null, 2);
+        if (updatedPlan.final_answer) {
+            const answer = updatedPlan.final_answer;
+            let answerText;
+
+            // Handle both successful recommendations and validation failures
+            if (answer.status === 'failed_validation') {
+                answerText = `AGENT: ${answer.message_for_user}`;
+            } else if (answer.status === 'success' && answer.commands) {
+                answerText = `Here are the recommended commands:\n- ${answer.commands.join('\n- ')}`;
+            } else {
+                answerText = typeof answer === 'string' ? answer : JSON.stringify(answer, null, 2);
             }
-            setInteractions(prev => [...prev, { type: 'agent', text: `Here is what I found:\n${answerText}` }]);
+            setInteractions(prev => [...prev, { type: 'agent', text: answerText }]);
         }
 
         if (JSON.stringify(updatedPlan).includes("case_updater_v1")) {
@@ -183,7 +212,14 @@ function Workspace() {
       <div className="tac-summary-wrapper">
         {isSummaryLoading && <div className="tac-summary-widget loading">Loading Summary for Case {activeCaseId}...</div>}
         {summaryError && !isSummaryLoading && <div className="tac-summary-widget error">{summaryError}</div>}
-        {caseData && <TacSummary caseData={caseData} onEvidenceClick={setViewingEvidence} />}
+        {caseData && (
+            <TacSummary
+                caseData={caseData}
+                contextOptions={contextOptions}
+                problemCategories={problemCategories}
+                onUpdate={() => fetchCaseData(activeCaseId)}
+            />
+        )}
       </div>
 
       <div className="interaction-log-container" ref={logContainerRef}>
@@ -212,9 +248,9 @@ function Workspace() {
           placeholder={isProcessingAction ? "Agent is executing a plan..." : "What should I do next for this case?"}
           value={userInput}
           onChange={(e) => setUserInput(e.target.value)}
-          disabled={isProcessingAction || isSummaryLoading}
+          disabled={isProcessingAction || isSummaryLoading || !caseData}
         />
-        <button type="submit" disabled={isProcessingAction || isSummaryLoading || !userInput.trim()}>
+        <button type="submit" disabled={isProcessingAction || isSummaryLoading || !userInput.trim() || !caseData}>
           {isProcessingAction ? '...' : 'Submit'}
         </button>
       </form>
@@ -224,7 +260,6 @@ function Workspace() {
   return (
     <div className="workspace-container">
       {showNewCaseModal && <NewCaseModal onCaseCreated={handleCaseCreated} onClose={() => setShowNewCaseModal(false)} />}
-      {viewingEvidence && <EvidenceModal caseId={activeCaseId} evidenceType={viewingEvidence} onClose={() => setViewingEvidence(null)} />}
       {activeCaseId ? renderWorkspaceView() : renderNoActiveCaseView()}
     </div>
   );

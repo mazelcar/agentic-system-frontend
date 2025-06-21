@@ -1,5 +1,5 @@
 --- Project Context: frontend ---
-Generated on: 2025-06-20 17:58:45
+Generated on: 2025-06-21 04:14:50
 
 --- Directory Structure ---
 ├── .gitignore
@@ -1407,6 +1407,7 @@ function Workspace() {
     try {
       const response = await axios.get(`${API_URL}/plan/status/${activePlanId}`);
       const updatedPlan = response.data;
+
       setInteractions(prev =>
         prev.map(interaction =>
           interaction.type === 'plan' && interaction.plan.plan_id === activePlanId
@@ -1414,9 +1415,21 @@ function Workspace() {
             : interaction
         )
       );
+
       if (updatedPlan.overall_status === 'completed' || updatedPlan.overall_status === 'failed') {
         setActivePlanId(null);
         setIsProcessingAction(false);
+
+        // THIS IS THE NEW LOGIC TO DISPLAY THE FINAL ANSWER
+        if (updatedPlan.overall_status === 'completed' && updatedPlan.final_answer) {
+            let answerText = updatedPlan.final_answer;
+            // Make the answer more readable if it's an object or array
+            if (typeof answerText !== 'string') {
+                answerText = JSON.stringify(answerText, null, 2);
+            }
+            setInteractions(prev => [...prev, { type: 'agent', text: `Here is what I found:\n${answerText}` }]);
+        }
+
         if (JSON.stringify(updatedPlan).includes("case_updater_v1")) {
             fetchCaseData(activeCaseId);
         }
@@ -1493,7 +1506,6 @@ function Workspace() {
 
       <div className="interaction-log-container" ref={logContainerRef}>
         {interactions.map((msg, index) => {
-          // --- THIS IS THE REFINED RENDER LOGIC ---
           if (msg.type === 'plan') {
             return (
               <div key={index} className="interaction-message-wrapper agent">
@@ -1509,7 +1521,6 @@ function Workspace() {
               </div>
             </div>
           );
-          // --- END OF REFINED RENDER LOGIC ---
         })}
       </div>
 

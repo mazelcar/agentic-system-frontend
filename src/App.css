@@ -27,7 +27,7 @@ body {
   font-size: 1.2rem;
   display: flex;
   align-items: center;
-  flex-shrink: 0; /* Prevent header from shrinking */
+  flex-shrink: 0;
 }
 
 .header-content {
@@ -37,14 +37,13 @@ body {
   width: 100%;
 }
 
-/* NEW STYLE FOR THE TITLE LINK */
 .nav-link-title {
   color: white;
   text-decoration: none;
 }
 .nav-link-title h1 {
   margin: 0;
-  font-size: 1.5rem; /* Make title a bit bigger */
+  font-size: 1.5rem;
 }
 
 
@@ -74,7 +73,7 @@ body {
   flex-grow: 1;
   display: flex;
   flex-direction: column;
-  overflow: hidden; /* Prevent double scrollbars */
+  overflow: hidden;
 }
 
 .chat-input {
@@ -82,7 +81,7 @@ body {
   padding: 15px;
   border-top: 1px solid #ddd;
   background-color: #f9f9f9;
-  flex-shrink: 0; /* Prevent input from shrinking */
+  flex-shrink: 0;
 }
 
 .chat-input input {
@@ -120,90 +119,9 @@ body {
   cursor: not-allowed;
 }
 
-/* --- Original styles for Upload component --- */
-.upload-container {
-  padding: 20px 30px;
-  text-align: center;
-}
-.upload-container h2 { color: #333; }
-.upload-container p { color: #666; margin-bottom: 30px; }
-.upload-form { display: flex; flex-direction: column; align-items: center; gap: 20px; }
-.file-input { font-size: 16px; padding: 10px; border: 1px solid #ccc; border-radius: 8px; width: 100%; max-width: 400px; }
-.status-message { margin-top: 20px; padding: 12px; border-radius: 8px; font-weight: 500; max-width: 600px; margin-left: auto; margin-right: auto; word-wrap: break-word; }
-.status-message.idle { background-color: #e2e3e5; color: #383d41; border: 1px solid #d6d8db; }
-.status-message.success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-.status-message.error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-.progress-container { margin-top: 20px; width: 100%; max-width: 600px; margin-left: auto; margin-right: auto; }
-.progress-bar-container { background-color: #e9ecef; border-radius: 8px; overflow: hidden; border: 1px solid #ced4da; }
-.progress-bar { background-color: #007bff; color: white; padding: 4px 0; text-align: center; font-weight: bold; font-size: 14px; transition: width 0.2s ease-in-out; white-space: nowrap; }
-
-/* --- Original and new styles for Sources --- */
-.sources-wrapper {
-  margin-top: 8px;
-}
-.sources-container {
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  background-color: #f9f9f9;
-}
-.sources-summary {
-  padding: 8px 12px;
-  cursor: pointer;
-  font-weight: 500;
-  color: #555;
-  outline: none;
-}
-.sources-summary::marker {
-  color: #007bff;
-}
-.sources-list {
-  padding: 0 12px 12px 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  max-height: 250px;
-  overflow-y: auto;
-}
-.source-item {
-  border: 1px solid #e0e0e0;
-  background-color: #fff;
-  padding: 10px;
-  border-radius: 6px;
-  font-size: 14px;
-}
-.source-content {
-  margin: 0 0 8px 0;
-  color: #333;
-  white-space: pre-wrap;
-}
-.source-metadata {
-  font-size: 12px;
-  color: #777;
-  display: flex;
-  justify-content: space-between;
-  border-top: 1px dashed #ccc;
-  padding-top: 6px;
-}
-
-/* --- Original styles for AnalyzeCase Component --- */
-.analyze-case-container {
-  padding: 20px 30px;
-  overflow-y: auto;
-}
-.analyze-case-container h2, .analyze-case-container p { text-align: center; }
-.case-form { max-width: 600px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
-.case-form .form-group { display: flex; flex-direction: column; }
-.case-form label { margin-bottom: 0.5rem; font-weight: bold; color: #333; }
-.case-form input[type="text"], .case-form textarea { width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; box-sizing: border-box; }
-.case-form textarea { resize: vertical; min-height: 80px; }
-.case-form button { padding: 0.8rem; background-color: #007bff; color: white; border: none; border-radius: 8px; font-size: 1.1rem; cursor: pointer; transition: background-color 0.2s; }
-.case-form button:disabled { background-color: #a0c7e4; cursor: not-allowed; }
-.case-form button:hover:not(:disabled) { background-color: #0056b3; }
-.status-box { margin-top: 2rem; padding: 1rem; border-radius: 8px; background-color: #eef; border: 1px solid #d6d6e7; max-width: 600px; margin-left: auto; margin-right: auto; word-wrap: break-word; }
-
-/* --- MODIFIED Styles for TacSummary Widget --- */
+/* --- TAC Summary & Network Info Form --- */
 .tac-summary-wrapper {
-  overflow-y: auto; /* This makes ONLY the summary scrollable */
+  overflow-y: auto;
   flex-grow: 1;
 }
 .tac-summary-widget {
@@ -216,20 +134,85 @@ body {
 }
 .tac-summary-widget.loading, .tac-summary-widget.error { text-align: center; color: #6c757d; padding: 40px 20px; }
 .tac-summary-widget.error { background-color: #f8d7da; color: #721c24; border-color: #f5c6cb; }
-.tac-summary-widget h3 { margin-top: 0; color: #0056b3; border-bottom: 2px solid #007bff; padding-bottom: 10px; margin-bottom: 20px; }
+
+.summary-header h3 {
+  margin-top: 0;
+  color: #0056b3;
+  border-bottom: 2px solid #007bff;
+  padding-bottom: 10px;
+  margin-bottom: 20px;
+}
+
 .summary-section { margin-bottom: 20px; }
 .summary-section:last-child { margin-bottom: 0; }
 .summary-section h4 { margin-bottom: 8px; color: #343a40; font-size: 16px; }
 .summary-section p, .summary-section li { margin: 4px 0; line-height: 1.6; color: #495057; }
-.summary-section p strong { color: #212529; }
 .summary-section ul { padding-left: 20px; margin-top: 5px; margin-bottom: 5px; }
 
-/* --- MODIFIED Styles for Workspace & No Case View --- */
+/* --- NEW: Network Info Form Styles --- */
+.network-info-form {
+  background-color: #ffffff;
+  padding: 20px;
+  border-radius: 6px;
+  border: 1px solid #ced4da;
+  margin-bottom: 20px;
+}
+.network-info-form .form-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+.network-info-form .form-header h4 {
+  margin: 0;
+  color: #343a40;
+}
+.network-info-form .form-header button {
+  background-color: #28a745;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+.network-info-form .form-header button:disabled {
+  background-color: #81d492;
+}
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 15px;
+}
+.form-row {
+  display: flex;
+  flex-direction: column;
+}
+.form-row label {
+  margin-bottom: 5px;
+  font-weight: 500;
+  color: #495057;
+  font-size: 14px;
+}
+.form-row input, .form-row select {
+  padding: 8px 12px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 15px;
+}
+.form-error {
+  color: #dc3545;
+  margin-top: 10px;
+  font-size: 14px;
+}
+
+
+/* --- Workspace & No Case View --- */
 .workspace-container {
   display: flex;
   flex-direction: column;
   flex-grow: 1;
-  overflow: hidden; /* Important for child scrolling */
+  overflow: hidden;
 }
 .no-case-view {
   display: flex;
@@ -246,15 +229,15 @@ body {
 .case-selection-actions { display: flex; gap: 20px; align-items: center; }
 .recent-cases-container select { font-size: 1rem; padding: 10px; border-radius: 6px; border: 1px solid #ced4da; }
 
-/* --- MODIFIED Styles for Interaction Log --- */
+/* --- Interaction Log --- */
 .interaction-log-container {
   padding: 10px 20px;
-  max-height: 200px;
+  max-height: 250px;
   overflow-y: auto;
   border-top: 1px solid #eee;
-  flex-shrink: 0; /* Prevent log from shrinking */
+  flex-shrink: 0;
 }
-.interaction-message-wrapper { /* New wrapper for alignment */
+.interaction-message-wrapper {
   display: flex;
   flex-direction: column;
   margin-top: 12px;
@@ -268,79 +251,45 @@ body {
   word-wrap: break-word;
   max-width: 80%;
   display: inline-block;
+  white-space: pre-wrap;
 }
 .interaction-message.user { background-color: #007bff; color: white; border-bottom-right-radius: 4px; }
-.interaction-message.agent { background-color: #e9e9eb; color: #333; border-bottom-left-radius: 4px; white-space: pre-wrap; }
-
-/* --- NEW STYLE FOR PLAN MESSAGES --- */
+.interaction-message.agent { background-color: #e9e9eb; color: #333; border-bottom-left-radius: 4px; }
 .interaction-message.plan {
-  background-color: transparent; /* The PlanDisplay has its own background */
-  padding: 0; /* The PlanDisplay has its own padding */
-  max-width: 100%; /* Allow the plan to take full width */
+  background-color: transparent;
+  padding: 0;
+  max-width: 100%;
 }
-
 .interaction-message strong { font-weight: bold; display: block; margin-bottom: 4px; font-size: 12px; opacity: 0.8; }
 
-/* --- Original Modal Styles --- */
+/* --- Modal Styles --- */
 .modal-backdrop { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); display: flex; justify-content: center; align-items: center; z-index: 1000; }
 .modal-content { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); width: 100%; max-width: 500px; }
 .modal-content h2 { margin-top: 0; }
-.modal-error { color: #721c24; background-color: #f8d7da; border: 1px solid #f5c6cb; padding: 10px; border-radius: 4px; margin-top: 0; }
+.modal-error { color: #721c24; background-color: #f8d7da; border: 1px solid #f5c6cb; padding: 10px; border-radius: 4px; margin-top: 15px; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
 .btn-primary { background-color: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 1rem; }
 .btn-primary:disabled { background-color: #a0c7ff; }
 .btn-secondary { background-color: #6c757d; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 1rem; }
 
-/* --- Styles for Evidence Drill-Down --- */
-.summary-section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-}
-
-.summary-section-header h4 {
-  margin: 0; /* Remove default margin from h4 */
-}
-
-.view-evidence-btn {
-  background-color: #e9ecef;
-  border: 1px solid #dee2e6;
-  color: #495057;
-  padding: 4px 10px;
-  font-size: 12px;
-  border-radius: 12px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.view-evidence-btn:hover {
-  background-color: #ced4da;
-  border-color: #adb5bd;
-}
-
-/* --- Styles for Evidence Modal --- */
-.modal-content.evidence-modal {
-  max-width: 90%;
-  width: 800px;
-  height: 80%;
+/* --- NEW: New Case Modal Styles --- */
+.form-group {
   display: flex;
   flex-direction: column;
+  margin-bottom: 15px;
 }
-
-.evidence-content {
-  flex-grow: 1;
-  overflow-y: auto;
-  background-color: #2b2b2b;
-  color: #f8f8f2;
-  font-family: 'Courier New', Courier, monospace;
-  padding: 15px;
+.form-group label {
+  margin-bottom: 5px;
+  font-weight: bold;
+}
+.form-group input, .form-group select {
+  padding: 10px;
+  border: 1px solid #ccc;
   border-radius: 4px;
-  border: 1px solid #444;
+  font-size: 1rem;
 }
-
-.evidence-content pre {
-  margin: 0;
-  white-space: pre-wrap; /* Wrap long lines */
-  word-wrap: break-word;
+.form-group small {
+  font-size: 0.8rem;
+  color: #6c757d;
+  margin-top: 5px;
 }
