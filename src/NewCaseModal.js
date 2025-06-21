@@ -1,52 +1,37 @@
 // src/NewCaseModal.js
 import React, { useState } from 'react';
 import axios from 'axios';
+import CheckboxGroup from './CheckboxGroup'; // <-- IMPORT THE NEW COMPONENT
 
 const API_URL = process.env.REACT_APP_API_URL;
 
-// A new component for the multi-select dropdown
-const MultiSelect = ({ label, options, selectedValues, onChange }) => {
-  const handleSelect = (e) => {
-    const selectedOptions = Array.from(e.target.selectedOptions, option => option.value);
-    onChange(selectedOptions);
-  };
-
-  return (
-    <div className="form-group">
-      <label htmlFor="affected-platforms">{label}</label>
-      <select
-        id="affected-platforms"
-        multiple
-        value={selectedValues}
-        onChange={handleSelect}
-        required
-        size="5" // Show 5 options at a time
-      >
-        {options.map(option => (
-          <option key={option.id} value={option.id}>
-            {option.displayName}
-          </option>
-        ))}
-      </select>
-      <small>Hold Ctrl (or Cmd on Mac) to select multiple options.</small>
-    </div>
-  );
-};
-
+// The old MultiSelect component is now completely removed.
 
 function NewCaseModal({ availablePlatforms, onCaseCreated, onClose }) {
   const [caseId, setCaseId] = useState('');
-  // RENAMED for clarity
   const [selectedPlatforms, setSelectedPlatforms] = useState([]);
   const [error, setError] = useState('');
   const [isCreating, setIsCreating] = useState(false);
 
   const handleCaseIdChange = (e) => {
     const value = e.target.value;
-    // Allow only numbers and limit to 10 digits
     if (/^\d*$/.test(value) && value.length <= 10) {
       setCaseId(value);
     }
+  };
+
+  // NEW HANDLER: This contains the logic for toggling checkboxes.
+  const handlePlatformChange = (platformId) => {
+    setSelectedPlatforms((prevSelected) => {
+      // If the ID is already in the array, remove it (uncheck)
+      if (prevSelected.includes(platformId)) {
+        return prevSelected.filter((id) => id !== platformId);
+      }
+      // Otherwise, add it to the array (check)
+      else {
+        return [...prevSelected, platformId];
+      }
+    });
   };
 
   const handleSubmit = async (e) => {
@@ -63,8 +48,6 @@ function NewCaseModal({ availablePlatforms, onCaseCreated, onClose }) {
     setIsCreating(true);
 
     try {
-      // The backend expects the key "problem_areas" due to the Pydantic alias.
-      // This is for backend compatibility with the validation tool.
       await axios.post(`${API_URL}/cases`, {
         case_id: caseId,
         problem_areas: selectedPlatforms,
@@ -98,12 +81,14 @@ function NewCaseModal({ availablePlatforms, onCaseCreated, onClose }) {
             />
           </div>
 
-          <MultiSelect
+          {/* --- THIS IS THE REPLACEMENT --- */}
+          <CheckboxGroup
             label="Affected Platform(s)"
             options={availablePlatforms || []}
             selectedValues={selectedPlatforms}
-            onChange={setSelectedPlatforms}
+            onChange={handlePlatformChange}
           />
+          {/* --- END REPLACEMENT --- */}
 
           {error && <p className="modal-error">{error}</p>}
           <div className="modal-actions">

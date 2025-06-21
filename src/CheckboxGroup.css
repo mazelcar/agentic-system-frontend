@@ -1,0 +1,38 @@
+/* src/CheckboxGroup.css */
+
+.checkbox-group-label {
+  margin-bottom: 10px;
+  font-weight: bold;
+  display: block; /* Ensures it takes its own line */
+}
+
+.checkbox-group-container {
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 10px;
+  background-color: #f9f9f9;
+}
+
+.checkbox-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.checkbox-item:last-child {
+  margin-bottom: 0;
+}
+
+.checkbox-item input[type="checkbox"] {
+  margin-right: 10px;
+  /* Make the checkbox a bit larger and easier to click */
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.checkbox-item label {
+  font-weight: normal;
+  cursor: pointer;
+  font-size: 1rem;
+}
