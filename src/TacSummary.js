@@ -10,30 +10,34 @@ const SummarySection = ({ title, children }) => (
   </div>
 );
 
-function TacSummary({ caseData, contextOptions, problemCategories, onUpdate }) {
+function TacSummary({ caseData, contextOptions, affectedPlatformConfig, onUpdate }) {
   if (!caseData) {
     return <div className="tac-summary-widget loading">Loading case data...</div>;
   }
 
-  const { tac_notes, recommendations, next_steps, problem_areas } = caseData;
+  const { tac_notes, recommendations, next_steps } = caseData;
+
+  // NEW: Map platform IDs from case data to their display names from the config
+  const platformDisplayNames = caseData.problem_areas?.map(id => {
+      const platform = affectedPlatformConfig?.find(p => p.id === id);
+      return platform ? platform.displayName : id;
+    }).join(', ') || 'N/A';
 
   return (
     <div className="tac-summary-widget">
       <div className="summary-header">
         <h3>TAC Summary for Case: {caseData.case_id}</h3>
-        {/* We can add an "Edit Problem Areas" button here later */}
       </div>
 
-      {/* The new, dynamic, editable form */}
       <NetworkInfoForm
         caseData={caseData}
         contextOptions={contextOptions}
-        problemCategories={problemCategories}
+        affectedPlatformConfig={affectedPlatformConfig}
         onUpdate={onUpdate}
       />
 
-      <SummarySection title="Problem Area(s)">
-        <p>{problem_areas?.join(', ') || 'N/A'}</p>
+      <SummarySection title="Affected Platform(s)">
+        <p>{platformDisplayNames}</p>
       </SummarySection>
 
       <SummarySection title="TAC Notes">

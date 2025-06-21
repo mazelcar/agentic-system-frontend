@@ -24,7 +24,8 @@ function Workspace() {
 
   // NEW state for holding config data
   const [contextOptions, setContextOptions] = useState(null);
-  const [problemCategories, setProblemCategories] = useState(null);
+  // RENAMED for clarity: this holds the configuration for our new platforms
+  const [affectedPlatformConfig, setAffectedPlatformConfig] = useState(null);
 
   // State for interactive workspace
   const [userInput, setUserInput] =useState('');
@@ -57,30 +58,24 @@ function Workspace() {
     try {
       const response = await axios.get(`${API_URL}/cases`);
       setRecentCases(response.data);
-    } catch (error) {
+    } catch (error) { // <-- THIS BLOCK IS NOW CORRECT
       console.error("Failed to fetch recent cases:", error);
     } finally {
       setIsCaseListLoading(false);
     }
   }, []);
 
-  // NEW: Fetch all config data on initial load
+  // MODIFIED: Fetch all config data on initial load from real endpoints
   useEffect(() => {
     const fetchConfigData = async () => {
       try {
         const [optionsRes, categoriesRes] = await Promise.all([
           axios.get(`${API_URL}/api/v1/context-options`),
-          // We need to create this endpoint on the backend
-          // For now, we'll mock it.
-          Promise.resolve({ data: { categories: [
-            { id: 'ont_issue', displayName: 'ONT/GPON Issue', required_fields: ['platform', 'software_version', 'olt_card_type', 'ont_model'] },
-            { id: 'interface_issue', displayName: 'Interface/Port Issue', required_fields: ['platform', 'software_version', 'affected_interface'] },
-            { id: 'system_issue', displayName: 'Platform/System Issue', required_fields: ['platform', 'software_version'] },
-            { id: 'routing_issue', displayName: 'BGP/Routing Issue', required_fields: ['platform', 'software_version', 'router_id', 'neighbor_ip'] },
-          ]}})
+          // This now calls our new, real backend endpoint
+          axios.get(`${API_URL}/api/v1/problem-categories`)
         ]);
         setContextOptions(optionsRes.data);
-        setProblemCategories(categoriesRes.data.categories);
+        setAffectedPlatformConfig(categoriesRes.data.categories);
       } catch (error) {
         console.error("Failed to fetch configuration data:", error);
         // Handle error appropriately, maybe show a global error message
@@ -130,7 +125,6 @@ function Workspace() {
             const answer = updatedPlan.final_answer;
             let answerText;
 
-            // Handle both successful recommendations and validation failures
             if (answer.status === 'failed_validation') {
                 answerText = `AGENT: ${answer.message_for_user}`;
             } else if (answer.status === 'success' && answer.commands) {
@@ -216,7 +210,7 @@ function Workspace() {
             <TacSummary
                 caseData={caseData}
                 contextOptions={contextOptions}
-                problemCategories={problemCategories}
+                affectedPlatformConfig={affectedPlatformConfig}
                 onUpdate={() => fetchCaseData(activeCaseId)}
             />
         )}
@@ -259,7 +253,13 @@ function Workspace() {
 
   return (
     <div className="workspace-container">
-      {showNewCaseModal && <NewCaseModal onCaseCreated={handleCaseCreated} onClose={() => setShowNewCaseModal(false)} />}
+      {showNewCaseModal && (
+        <NewCaseModal
+          availablePlatforms={affectedPlatformConfig}
+          onCaseCreated={handleCaseCreated}
+          onClose={() => setShowNewCaseModal(false)}
+        />
+      )}
       {activeCaseId ? renderWorkspaceView() : renderNoActiveCaseView()}
     </div>
   );

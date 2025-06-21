@@ -4,7 +4,7 @@ import axios from 'axios';
 
 const API_URL = process.env.REACT_APP_API_URL;
 
-function NetworkInfoForm({ caseData, contextOptions, problemCategories, onUpdate }) {
+function NetworkInfoForm({ caseData, contextOptions, affectedPlatformConfig, onUpdate }) {
   const [formData, setFormData] = useState({});
   const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState('');
@@ -16,18 +16,18 @@ function NetworkInfoForm({ caseData, contextOptions, problemCategories, onUpdate
     }
   }, [caseData]);
 
-  // Calculate which fields to show based on selected problem areas
+  // Calculate which fields to show based on selected platforms
   const requiredFields = useMemo(() => {
-    if (!caseData?.problem_areas || !problemCategories) {
+    if (!caseData?.problem_areas || !affectedPlatformConfig) {
       return new Set();
     }
     const fields = new Set();
-    caseData.problem_areas.forEach(areaId => {
-      const category = problemCategories.find(cat => cat.id === areaId);
-      category?.required_fields?.forEach(field => fields.add(field));
+    caseData.problem_areas.forEach(platformId => {
+      const platform = affectedPlatformConfig.find(p => p.id === platformId);
+      platform?.required_fields?.forEach(field => fields.add(field));
     });
     return fields;
-  }, [caseData?.problem_areas, problemCategories]);
+  }, [caseData?.problem_areas, affectedPlatformConfig]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -49,7 +49,7 @@ function NetworkInfoForm({ caseData, contextOptions, problemCategories, onUpdate
     }
   };
 
-  // Helper to get dropdown options for a given field
+  // MODIFIED: Helper to get dropdown options for a given field
   const getOptionsForField = (fieldName) => {
     if (!contextOptions) return [];
     switch (fieldName) {
@@ -63,6 +63,13 @@ function NetworkInfoForm({ caseData, contextOptions, problemCategories, onUpdate
         return platformForOlt?.olt_card_types || [];
       case 'ont_model':
         return contextOptions.ont_models || [];
+      // --- NEW CASES FOR OUR NEW FIELDS ---
+      case 'type_of_card':
+        return contextOptions.type_of_card || [];
+      case 'axos_version':
+        return contextOptions.axos_versions || [];
+      case 'smx_version':
+        return contextOptions.smx_versions || [];
       default:
         return [];
     }
@@ -89,6 +96,7 @@ function NetworkInfoForm({ caseData, contextOptions, problemCategories, onUpdate
       );
     }
 
+    // This handles text inputs like 'smx_linux_version'
     return (
       <div key={fieldName} className="form-row">
         <label htmlFor={fieldName}>{label}</label>
@@ -108,7 +116,7 @@ function NetworkInfoForm({ caseData, contextOptions, problemCategories, onUpdate
     return (
         <div className="network-info-form">
             <h4>Network Info</h4>
-            <p>Select a problem area to specify network context.</p>
+            <p>Select an affected platform to specify network context.</p>
         </div>
     );
   }
@@ -122,7 +130,7 @@ function NetworkInfoForm({ caseData, contextOptions, problemCategories, onUpdate
         </button>
       </div>
       <div className="form-grid">
-        {Array.from(requiredFields).map(fieldName => renderField(fieldName))}
+        {Array.from(requiredFields).sort().map(fieldName => renderField(fieldName))}
       </div>
       {error && <p className="form-error">{error}</p>}
     </div>

@@ -1,5 +1,5 @@
 // src/NewCaseModal.js
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import axios from 'axios';
 
 const API_URL = process.env.REACT_APP_API_URL;
@@ -13,9 +13,9 @@ const MultiSelect = ({ label, options, selectedValues, onChange }) => {
 
   return (
     <div className="form-group">
-      <label htmlFor="problem-areas">{label}</label>
+      <label htmlFor="affected-platforms">{label}</label>
       <select
-        id="problem-areas"
+        id="affected-platforms"
         multiple
         value={selectedValues}
         onChange={handleSelect}
@@ -34,63 +34,12 @@ const MultiSelect = ({ label, options, selectedValues, onChange }) => {
 };
 
 
-function NewCaseModal({ onCaseCreated, onClose }) {
+function NewCaseModal({ availablePlatforms, onCaseCreated, onClose }) {
   const [caseId, setCaseId] = useState('');
-  const [problemAreas, setProblemAreas] = useState([]);
-  const [availableCategories, setAvailableCategories] = useState([]);
+  // RENAMED for clarity
+  const [selectedPlatforms, setSelectedPlatforms] = useState([]);
   const [error, setError] = useState('');
   const [isCreating, setIsCreating] = useState(false);
-
-  // Fetch problem categories when the modal mounts
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        // This assumes your problem categories are available via the context-options endpoint
-        // or you could create a dedicated endpoint for it.
-        const response = await axios.get(`${API_URL}/api/v1/context-options`);
-        // Let's assume the categories are in a separate key or we derive them
-        // For now, let's mock it based on a potential new endpoint or structure
-        const problemCatsResponse = await axios.get(`${API_URL}/api/v1/problem-categories`); // Hypothetical endpoint
-        setAvailableCategories(problemCatsResponse.data.categories);
-      } catch (err) {
-        // Let's fetch from the context-options as a fallback for now
-         try {
-            const response = await axios.get(`${API_URL}/api/v1/context-options`);
-            // This is a placeholder. We need a dedicated categories endpoint.
-            // For now, we'll create a dummy one.
-            const categories = [
-                { id: 'ont_issue', displayName: 'ONT/GPON Issue' },
-                { id: 'interface_issue', displayName: 'Interface/Port Issue' },
-                { id: 'system_issue', displayName: 'Platform/System Issue' },
-                { id: 'routing_issue', displayName: 'BGP/Routing Issue' },
-            ];
-            setAvailableCategories(categories);
-         } catch (finalErr) {
-            setError('Could not load problem categories from server.');
-         }
-      }
-    };
-    // Let's create a dedicated endpoint for problem categories for cleaner design
-    const fetchProblemCategories = async () => {
-        try {
-            const response = await axios.get(`${API_URL}/api/v1/problem-categories`); // We will need to create this endpoint
-            setAvailableCategories(response.data.categories);
-        } catch (err) {
-            console.error("Failed to fetch problem categories", err);
-            setError("Failed to load configuration from server.");
-        }
-    };
-    // For now, let's just use a hardcoded list until the endpoint is made
-    const categories = [
-        { id: 'ont_issue', displayName: 'ONT/GPON Issue' },
-        { id: 'interface_issue', displayName: 'Interface/Port Issue' },
-        { id: 'system_issue', displayName: 'Platform/System Issue' },
-        { id: 'routing_issue', displayName: 'BGP/Routing Issue' },
-    ];
-    setAvailableCategories(categories);
-
-  }, []);
-
 
   const handleCaseIdChange = (e) => {
     const value = e.target.value;
@@ -106,17 +55,19 @@ function NewCaseModal({ onCaseCreated, onClose }) {
       setError('Case ID is required.');
       return;
     }
-    if (problemAreas.length === 0) {
-      setError('At least one Problem Area must be selected.');
+    if (selectedPlatforms.length === 0) {
+      setError('At least one Affected Platform must be selected.');
       return;
     }
     setError('');
     setIsCreating(true);
 
     try {
+      // The backend expects the key "problem_areas" due to the Pydantic alias.
+      // This is for backend compatibility with the validation tool.
       await axios.post(`${API_URL}/cases`, {
         case_id: caseId,
-        problem_areas: problemAreas,
+        problem_areas: selectedPlatforms,
       });
       onCaseCreated(caseId);
     } catch (err) {
@@ -148,10 +99,10 @@ function NewCaseModal({ onCaseCreated, onClose }) {
           </div>
 
           <MultiSelect
-            label="Problem Area(s)"
-            options={availableCategories}
-            selectedValues={problemAreas}
-            onChange={setProblemAreas}
+            label="Affected Platform(s)"
+            options={availablePlatforms || []}
+            selectedValues={selectedPlatforms}
+            onChange={setSelectedPlatforms}
           />
 
           {error && <p className="modal-error">{error}</p>}
@@ -159,7 +110,7 @@ function NewCaseModal({ onCaseCreated, onClose }) {
             <button type="button" onClick={onClose} disabled={isCreating} className="btn-secondary">
               Cancel
             </button>
-            <button type="submit" disabled={isCreating || problemAreas.length === 0} className="btn-primary">
+            <button type="submit" disabled={isCreating || selectedPlatforms.length === 0} className="btn-primary">
               {isCreating ? 'Creating...' : 'Create Case'}
             </button>
           </div>
